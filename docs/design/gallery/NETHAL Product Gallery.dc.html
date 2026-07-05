@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #0A0F11; font-family: 'Space Grotesk', system-ui, sans-serif; }
+  @keyframes nethalPulse {
+    0% { transform: scale(0.2); opacity: 0.55; }
+    65% { opacity: 0.14; }
+    100% { transform: scale(2.05); opacity: 0; }
+  }
+  @keyframes nethalGlow {
+    0%, 100% { opacity: 0.30; }
+    50% { opacity: 0.62; }
+  }
+</style>
+</helmet>
+
+<div style="padding:36px 44px 8px;color:#EDF2F2;">
+  <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px;">
+    <span style="display:flex;align-items:center;gap:6px;font-family:'Space Grotesk';font-weight:700;font-size:15px;letter-spacing:0.06em;color:#EDF2F2;"><svg width="16" height="16" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" stroke="#2B6E7A" stroke-width="2.6"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#2B6E7A"/></svg>NETHAL</span>
+    <span style="font-size:13px;color:#5C6C70;">Product Design — núcleo inicial</span>
+  </div>
+  <p style="max-width:640px;font-size:13px;line-height:1.6;color:#93A3A8;margin:0 0 18px;">
+    Descoberta, abstração e controle de equipamentos de rede. Telas ordenadas conforme a jornada real e a bottom nav: Overview (com WAN/Wi-Fi/Clientes/Capabilities/Driver em drill-down), Equipamentos, Ações.
+  </p>
+  <div style="display:flex;gap:18px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#5C6C70;font-family:'JetBrains Mono',monospace;"><span style="width:8px;height:8px;border-radius:2px;background:#2B6E7A;display:inline-block;"></span>petrol · ação primária</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#5C6C70;font-family:'JetBrains Mono',monospace;"><span style="width:8px;height:8px;border-radius:2px;background:#35B8C0;display:inline-block;"></span>cyan · sinal / ao vivo</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#5C6C70;font-family:'JetBrains Mono',monospace;"><span style="width:8px;height:8px;border-radius:2px;background:#3EA968;display:inline-block;"></span>verde · somente sucesso</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#5C6C70;font-family:'JetBrains Mono',monospace;"><span style="width:8px;height:8px;border-radius:2px;background:#D9A441;display:inline-block;"></span>âmbar · experimental</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#5C6C70;font-family:'JetBrains Mono',monospace;"><span style="width:8px;height:8px;border-radius:2px;background:#DC5B54;display:inline-block;"></span>vermelho · somente erro</div>
+  </div>
+</div>
+
+<section id="t1" style="padding:28px 44px 40px;border-bottom:1px solid rgba(255,255,255,0.08);">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px;">
+    <a href="#t1" style="font:600 10px 'JetBrains Mono',monospace;padding:3px 7px;background:#EDF2F2;color:#0A0F11;border-radius:4px;text-decoration:none;">1</a>
+    <span style="font:600 14px 'Space Grotesk';color:#EDF2F2;">Telas principais</span>
+  </div>
+  <p style="font-size:12px;color:#5C6C70;margin:0 0 22px;">Ordem = jornada + bottom nav: identificação → Overview e seus drill-downs (WAN, Wi-Fi, Clientes, Capabilities, Driver) → Ações.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start;">
+
+    <div id="1a" data-screen-label="Splash" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1a" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1a</a><span style="font-size:11px;color:#93A3A8;">Splash</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#0B1113" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0B1113;overflow:hidden;">
+          <div style="position:absolute;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(43,110,122,0.28),transparent 70%);animation:nethalGlow 4s ease-in-out infinite;"></div>
+          <div style="position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:56px;border:2px solid #2B6E7A;border-radius:16px;margin-bottom:22px;">
+            <div style="width:16px;height:16px;border-radius:4px;background:#2B6E7A;"></div>
+            <div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:2px;height:8px;background:#35B8C0;border-radius:1px;"></div>
+            <div style="position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:2px;height:8px;background:#35B8C0;border-radius:1px;"></div>
+            <div style="position:absolute;left:-9px;top:50%;transform:translateY(-50%);width:8px;height:2px;background:#35B8C0;border-radius:1px;"></div>
+            <div style="position:absolute;right:-9px;top:50%;transform:translateY(-50%);width:8px;height:2px;background:#35B8C0;border-radius:1px;"></div>
+          </div>
+          <div style="position:relative;font-family:'Space Grotesk';font-weight:700;font-size:30px;letter-spacing:0.14em;color:#EDF2F2;">NETHAL</div>
+          <div style="position:relative;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.18em;color:#5C6C70;">NETWORK HARDWARE ABSTRACTION LAYER</div>
+          <div style="position:absolute;bottom:28px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#3A464A;">v0.4.2</div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1b" data-screen-label="Descoberta" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1b" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1b</a><span style="font-size:11px;color:#93A3A8;">Descoberta</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#0B1113" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#0B1113;box-sizing:border-box;padding:20px 22px;">
+          <div style="font:600 11px 'JetBrains Mono',monospace;letter-spacing:0.16em;color:#5C6C70;">DESCOBERTA</div>
+          <div style="flex:1;position:relative;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;width:60px;height:60px;border-radius:50%;border:1.5px solid #35B8C0;animation:nethalPulse 3s ease-out infinite;"></div>
+            <div style="position:absolute;width:60px;height:60px;border-radius:50%;border:1.5px solid #35B8C0;animation:nethalPulse 3s ease-out infinite 1s;"></div>
+            <div style="position:absolute;width:60px;height:60px;border-radius:50%;border:1.5px solid #35B8C0;animation:nethalPulse 3s ease-out infinite 2s;"></div>
+            <div style="position:relative;width:14px;height:14px;border-radius:4px;background:#2B6E7A;box-shadow:0 0 0 6px rgba(43,110,122,0.25);"></div>
+          </div>
+          <div style="text-align:center;font-size:14px;color:#EDF2F2;margin-bottom:6px;">Procurando equipamentos na rede</div>
+          <div style="text-align:center;font:11.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:18px;">mDNS · UPnP · ARP · SSDP</div>
+          <div style="background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:9px;">
+            <div style="display:flex;justify-content:space-between;font:11.5px 'JetBrains Mono',monospace;"><span style="color:#93A3A8;">192.168.1.1</span><span style="color:#3EA968;">respondeu · ARP</span></div>
+            <div style="display:flex;justify-content:space-between;font:11.5px 'JetBrains Mono',monospace;"><span style="color:#93A3A8;">192.168.1.2</span><span style="color:#3EA968;">respondeu · mDNS</span></div>
+            <div style="display:flex;justify-content:space-between;font:11.5px 'JetBrains Mono',monospace;"><span style="color:#3A464A;">192.168.1.0/24</span><span style="color:#3A464A;">escaneando…</span></div>
+          </div>
+          <div style="margin-top:16px;height:2px;background:rgba(255,255,255,0.08);border-radius:1px;overflow:hidden;"><div style="width:62%;height:100%;background:#2B6E7A;"></div></div>
+          <div style="text-align:center;margin-top:18px;font-size:13px;color:#93A3A8;">Cancelar</div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1c" data-screen-label="Equipamentos encontrados" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1c" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1c</a><span style="font-size:11px;color:#93A3A8;">Equipamentos encontrados</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:20px 22px 4px;display:flex;align-items:baseline;justify-content:space-between;">
+            <span style="font-size:22px;font-weight:600;color:#EDF2F2;">Equipamentos</span>
+            <span style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;">3 encontrados</span>
+          </div>
+          <div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+            <sc-for list="{{ devices }}" as="d" hint-placeholder-count="3">
+              <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 14px;display:flex;align-items:center;gap:12px;">
+                <div style="width:38px;height:38px;border-radius:10px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#8FC4CC" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#8FC4CC"/><circle cx="11.5" cy="13" r="1" fill="#8FC4CC"/><path d="M8 9V6M16 9V6" stroke="#8FC4CC" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ d.name }}</div>
+                  <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">{{ d.sub }}</div>
+                </div>
+                <div style="font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px;background:{{ d.tagBg }};color:{{ d.tagColor }};white-space:nowrap;">{{ d.tag }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#5C6C70" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <span style="font-size:10.5px;color:#5C6C70;">Overview</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#EDF2F2" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#EDF2F2"/><circle cx="11.5" cy="13" r="1" fill="#EDF2F2"/><path d="M8 9V6M16 9V6" stroke="#EDF2F2" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Equipamentos</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#5C6C70" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+              <span style="font-size:10.5px;color:#5C6C70;">Ações</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div>
+              <span style="font-size:10.5px;color:#5C6C70;">Mais</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1d" data-screen-label="Overview" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1d" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1d</a><span style="font-size:11px;color:#93A3A8;">Overview</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:20px 22px 16px;">
+            <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#5C6C70;margin-bottom:6px;">EQUIPAMENTO</div>
+            <div style="font-size:26px;font-weight:600;color:#EDF2F2;line-height:1.15;">HG8245Q2</div>
+            <div style="font-size:13.5px;color:#93A3A8;margin-top:2px;">Huawei</div>
+          </div>
+          <div style="flex:1;padding:0 22px;display:flex;flex-direction:column;gap:18px;">
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:16px;">
+              <div style="position:relative;width:52px;height:52px;border-radius:50%;background:conic-gradient(#3EA968 0% 92%, rgba(255,255,255,0.08) 92% 100%);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div style="width:42px;height:42px;border-radius:50%;background:#182226;display:flex;align-items:center;justify-content:center;font:600 12px 'JetBrains Mono',monospace;color:#3EA968;">92</div>
+              </div>
+              <div>
+                <div style="font-size:15px;color:#EDF2F2;font-weight:600;">Bom</div>
+                <div style="font-size:12px;color:#5C6C70;margin-top:2px;">Saúde do equipamento</div>
+              </div>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+                <span style="width:7px;height:7px;border-radius:50%;background:#3EA968;display:inline-block;"></span>
+                <span style="font-size:12.5px;color:#93A3A8;">Online</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:16px;">
+              <div><div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#5C6C70;margin-bottom:4px;">FABRICANTE</div><div style="font-size:14px;color:#EDF2F2;">Huawei</div></div>
+              <div><div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#5C6C70;margin-bottom:4px;">MODELO</div><div style="font-size:14px;color:#EDF2F2;">HG8245Q2</div></div>
+              <div><div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#5C6C70;margin-bottom:4px;">DRIVER</div><div style="font-size:14px;color:#EDF2F2;">HG Series v0.3.1</div></div>
+              <div><div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#5C6C70;margin-bottom:4px;">FIRMWARE</div><div style="font-size:14px;color:#EDF2F2;">V5R020C10S144</div></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#EDF2F2" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#EDF2F2" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Overview</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#5C6C70" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#5C6C70"/><circle cx="11.5" cy="13" r="1" fill="#5C6C70"/><path d="M8 9V6M16 9V6" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <span style="font-size:10.5px;color:#5C6C70;">Equipamentos</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#5C6C70" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+              <span style="font-size:10.5px;color:#5C6C70;">Ações</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+              <div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div>
+              <span style="font-size:10.5px;color:#5C6C70;">Mais</span>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1e" data-screen-label="WAN" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1e" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1e</a><span style="font-size:11px;color:#93A3A8;">WAN</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:18px 22px 0;display:flex;align-items:center;gap:14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#93A3A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:15px;color:#93A3A8;">WAN</span>
+          </div>
+          <div style="flex:1;overflow:auto;padding:18px 22px;">
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 18px;display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+              <span style="width:9px;height:9px;border-radius:50%;background:#3EA968;display:inline-block;flex-shrink:0;"></span>
+              <div>
+                <div style="font-size:16px;font-weight:600;color:#EDF2F2;">Conectado</div>
+                <div style="font-size:12px;color:#5C6C70;margin-top:2px;">PPPoE · uptime 14d 6h</div>
+              </div>
+            </div>
+            <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#5C6C70;margin-bottom:8px;">CONEXÃO</div>
+            <div style="display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;margin-bottom:20px;">
+              <div style="background:#182226;padding:12px 14px;display:flex;justify-content:space-between;"><span style="font-size:13px;color:#5C6C70;">Tipo</span><span style="font:13px 'JetBrains Mono',monospace;color:#EDF2F2;">PPPoE</span></div>
+              <div style="background:#182226;padding:12px 14px;display:flex;justify-content:space-between;"><span style="font-size:13px;color:#5C6C70;">IP público</span><span style="font:13px 'JetBrains Mono',monospace;color:#EDF2F2;">187.45.12.90</span></div>
+              <div style="background:#182226;padding:12px 14px;display:flex;justify-content:space-between;"><span style="font-size:13px;color:#5C6C70;">Gateway</span><span style="font:13px 'JetBrains Mono',monospace;color:#EDF2F2;">187.45.12.1</span></div>
+              <div style="background:#182226;padding:12px 14px;display:flex;justify-content:space-between;"><span style="font-size:13px;color:#5C6C70;">DNS</span><span style="font:13px 'JetBrains Mono',monospace;color:#EDF2F2;">8.8.8.8, 1.1.1.1</span></div>
+              <div style="background:#182226;padding:12px 14px;display:flex;justify-content:space-between;"><span style="font-size:13px;color:#5C6C70;">MTU</span><span style="font:13px 'JetBrains Mono',monospace;color:#EDF2F2;">1492</span></div>
+            </div>
+            <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#5C6C70;margin-bottom:8px;">TRÁFEGO</div>
+            <div style="display:flex;gap:12px;">
+              <div style="flex:1;background:#182226;border-radius:12px;padding:14px;">
+                <div style="font-size:11px;color:#5C6C70;margin-bottom:4px;">Download</div>
+                <div style="font:600 16px 'JetBrains Mono',monospace;color:#8FC4CC;">312 Mbps</div>
+              </div>
+              <div style="flex:1;background:#182226;border-radius:12px;padding:14px;">
+                <div style="font-size:11px;color:#5C6C70;margin-bottom:4px;">Upload</div>
+                <div style="font:600 16px 'JetBrains Mono',monospace;color:#8FC4CC;">108 Mbps</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#EDF2F2" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#EDF2F2" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Overview</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#5C6C70" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#5C6C70"/><circle cx="11.5" cy="13" r="1" fill="#5C6C70"/><path d="M8 9V6M16 9V6" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Equipamentos</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#5C6C70" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Ações</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Mais</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1f" data-screen-label="Wi-Fi" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1f" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1f</a><span style="font-size:11px;color:#93A3A8;">Wi-Fi</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:18px 22px 0;display:flex;align-items:center;gap:14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#93A3A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:15px;color:#93A3A8;">Wi-Fi</span>
+          </div>
+          <div style="flex:1;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px;">
+            <sc-for list="{{ wifiBands }}" as="b" hint-placeholder-count="2">
+              <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                  <div>
+                    <div style="font-size:15px;font-weight:600;color:#EDF2F2;">{{ b.band }}</div>
+                    <div style="font:12px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">{{ b.ssid }}</div>
+                  </div>
+                  <div style="width:40px;height:24px;border-radius:12px;background:{{ b.toggleBg }};position:relative;flex-shrink:0;">
+                    <div style="width:18px;height:18px;border-radius:50%;background:#EDF2F2;position:absolute;top:3px;left:{{ b.toggleLeft }};"></div>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:12px;">
+                  <div><div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:3px;">CANAL</div><div style="font-size:13px;color:#EDF2F2;">{{ b.channel }}</div></div>
+                  <div><div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:3px;">LARGURA</div><div style="font-size:13px;color:#EDF2F2;">{{ b.width }}</div></div>
+                  <div><div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:3px;">SEGURANÇA</div><div style="font-size:13px;color:#EDF2F2;">{{ b.security }}</div></div>
+                  <div><div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:3px;">CLIENTES</div><div style="font-size:13px;color:#EDF2F2;">{{ b.clients }}</div></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#EDF2F2" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#EDF2F2" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Overview</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#5C6C70" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#5C6C70"/><circle cx="11.5" cy="13" r="1" fill="#5C6C70"/><path d="M8 9V6M16 9V6" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Equipamentos</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#5C6C70" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Ações</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Mais</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1g" data-screen-label="Clientes" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1g" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1g</a><span style="font-size:11px;color:#93A3A8;">Clientes</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:18px 22px 0;display:flex;align-items:center;gap:14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#93A3A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:15px;color:#93A3A8;">Clientes</span>
+            <span style="margin-left:auto;font:11px 'JetBrains Mono',monospace;color:#5C6C70;">7 conectados</span>
+          </div>
+          <div style="flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px;">
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2" stroke="#8FC4CC" stroke-width="1.8"/><path d="M11 18h2" stroke="#8FC4CC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Pixel 9 Pro</div><div style="font:10.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">192.168.1.14 · 5 GHz</div></div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;color:#93A3A8;text-align:right;">-42 dBm</div>
+            </div>
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="13" rx="1.5" stroke="#8FC4CC" stroke-width="1.8"/><path d="M1 20h22" stroke="#8FC4CC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">MacBook Air</div><div style="font:10.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">192.168.1.22 · 5 GHz</div></div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;color:#93A3A8;text-align:right;">-38 dBm</div>
+            </div>
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="13" rx="1.5" stroke="#8FC4CC" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="#8FC4CC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Smart TV — Sala</div><div style="font:10.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">192.168.1.31 · 2.4 GHz</div></div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;color:#93A3A8;text-align:right;">-56 dBm</div>
+            </div>
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="8" width="16" height="8" rx="1.5" stroke="#8FC4CC" stroke-width="1.8"/><path d="M7 8V4h10v4M8 20h8" stroke="#8FC4CC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Impressora HP</div><div style="font:10.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">192.168.1.40 · 2.4 GHz</div></div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;color:#93A3A8;text-align:right;">-61 dBm</div>
+            </div>
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2" stroke="#8FC4CC" stroke-width="1.8"/><path d="M11 18h2" stroke="#8FC4CC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">iPhone 15</div><div style="font:10.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">192.168.1.19 · 5 GHz</div></div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;color:#93A3A8;text-align:right;">-45 dBm</div>
+            </div>
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="6" rx="1" stroke="#8FC4CC" stroke-width="1.8"/><path d="M12 8v4M8 12h8v6a2 2 0 01-2 2h-4a2 2 0 01-2-2v-6z" stroke="#8FC4CC" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Plug IoT — Cozinha</div><div style="font:10.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">192.168.1.55 · 2.4 GHz</div></div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;color:#93A3A8;text-align:right;">-64 dBm</div>
+            </div>
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:9px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="13" rx="1.5" stroke="#8FC4CC" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="#8FC4CC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;color:#EDF2F2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ThinkPad X1</div><div style="font:10.5px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:2px;">192.168.1.27 · 5 GHz</div></div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;color:#93A3A8;text-align:right;">-40 dBm</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#EDF2F2" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#EDF2F2" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Overview</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#5C6C70" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#5C6C70"/><circle cx="11.5" cy="13" r="1" fill="#5C6C70"/><path d="M8 9V6M16 9V6" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Equipamentos</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#5C6C70" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Ações</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Mais</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1h" data-screen-label="Capabilities" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1h" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1h</a><span style="font-size:11px;color:#93A3A8;">Capabilities</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:20px 22px 2px;">
+            <div style="font-size:22px;font-weight:600;color:#EDF2F2;">Capabilities</div>
+            <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:3px;">8 disponíveis · 2 limitadas · 1 indisponível</div>
+          </div>
+          <div style="flex:1;overflow:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:16px;">
+            <div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#3EA968;margin-bottom:6px;padding-left:4px;">DISPONÍVEL</div>
+              <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;">
+                <div style="padding:12px 14px;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><path d="M5 13l4 4L19 7" stroke="#3EA968" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span style="flex:1;font-size:14px;color:#EDF2F2;">Ler WAN</span>
+                    <span style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;">98%</span>
+                  </div>
+                  <div style="margin-top:10px;padding-left:26px;display:flex;flex-direction:column;gap:6px;">
+                    <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;"><div style="width:98%;height:100%;background:#3EA968;"></div></div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      <span style="font:10px 'JetBrains Mono',monospace;color:#93A3A8;background:rgba(255,255,255,0.06);padding:3px 7px;border-radius:6px;">confiança 98%</span>
+                      <span style="font:10px 'JetBrains Mono',monospace;color:#93A3A8;background:rgba(255,255,255,0.06);padding:3px 7px;border-radius:6px;">origem TR-069</span>
+                      <span style="font:10px 'JetBrains Mono',monospace;color:#93A3A8;background:rgba(255,255,255,0.06);padding:3px 7px;border-radius:6px;">hg-series v0.3.1</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="border-top:1px solid rgba(255,255,255,0.06);padding:12px 14px;display:flex;align-items:center;gap:10px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3EA968" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span style="flex:1;font-size:14px;color:#EDF2F2;">Ler Wi-Fi</span><span style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;">97%</span>
+                </div>
+                <div style="border-top:1px solid rgba(255,255,255,0.06);padding:12px 14px;display:flex;align-items:center;gap:10px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3EA968" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span style="flex:1;font-size:14px;color:#EDF2F2;">Ler Clientes</span><span style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;">95%</span>
+                </div>
+                <div style="border-top:1px solid rgba(255,255,255,0.06);padding:12px 14px;display:flex;align-items:center;gap:10px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3EA968" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span style="flex:1;font-size:14px;color:#EDF2F2;">Ler Firmware</span><span style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;">99%</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#D9A441;margin-bottom:6px;padding-left:4px;">LIMITADO</div>
+              <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;">
+                <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 4L22 20H2L12 4Z" stroke="#D9A441" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4" stroke="#D9A441" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="0.6" fill="#D9A441"/></svg>
+                  <span style="flex:1;font-size:14px;color:#EDF2F2;">Alterar Canal</span><span style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;">72%</span>
+                </div>
+                <div style="border-top:1px solid rgba(255,255,255,0.06);padding:12px 14px;display:flex;align-items:center;gap:10px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 4L22 20H2L12 4Z" stroke="#D9A441" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4" stroke="#D9A441" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="0.6" fill="#D9A441"/></svg>
+                  <span style="flex:1;font-size:14px;color:#EDF2F2;">Reiniciar</span><span style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;">80%</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#DC5B54;margin-bottom:6px;padding-left:4px;">INDISPONÍVEL</div>
+              <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;">
+                <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;opacity:0.6;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#DC5B54" stroke-width="2.2" stroke-linecap="round"/></svg>
+                  <span style="flex:1;font-size:14px;color:#93A3A8;">Trocar Senha</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#EDF2F2" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#EDF2F2" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Overview</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#5C6C70" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#5C6C70"/><circle cx="11.5" cy="13" r="1" fill="#5C6C70"/><path d="M8 9V6M16 9V6" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Equipamentos</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#5C6C70" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Ações</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Mais</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1i" data-screen-label="Driver" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1i" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1i</a><span style="font-size:11px;color:#93A3A8;">Driver</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:18px 22px 0;display:flex;align-items:center;gap:14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#93A3A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:15px;color:#93A3A8;">Driver</span>
+          </div>
+          <div style="padding:18px 22px;">
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;">
+              <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#5C6C70;margin-bottom:8px;">DRIVER ATIVO</div>
+              <div style="font-size:21px;font-weight:600;color:#EDF2F2;line-height:1.2;">HG Series Driver</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+                <span style="font:12px 'JetBrains Mono',monospace;color:#8FC4CC;background:rgba(43,110,122,0.16);padding:4px 9px;border-radius:999px;">v0.3.1</span>
+                <span style="font-size:11.5px;font-weight:600;color:#3EA968;background:rgba(62,169,104,0.14);padding:4px 9px;border-radius:999px;">Stable</span>
+              </div>
+              <div style="margin-top:16px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#5C6C70;margin-bottom:5px;"><span>Confiança do driver</span><span style="font-family:'JetBrains Mono',monospace;color:#EDF2F2;">96%</span></div>
+                <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;"><div style="width:96%;height:100%;background:#2B6E7A;"></div></div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1;overflow:auto;padding:0 22px;">
+            <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#5C6C70;margin-bottom:8px;">COMPATÍVEL COM</div>
+            <div style="display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;margin-bottom:20px;">
+              <sc-for list="{{ compatModels }}" as="m" hint-placeholder-count="4">
+                <div style="background:#12191C;padding:11px 14px;display:flex;align-items:center;gap:10px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3EA968" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span style="flex:1;font:13px 'JetBrains Mono',monospace;color:#EDF2F2;">{{ m.name }}</span>
+                  <sc-if value="{{ m.current }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:#8FC4CC;background:rgba(43,110,122,0.16);padding:2px 7px;border-radius:999px;">atual</span></sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font:10.5px 'JetBrains Mono',monospace;letter-spacing:0.12em;color:#5C6C70;margin-bottom:8px;">DETALHES</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#5C6C70;">Protocolo</span><span style="color:#EDF2F2;">TR-069 · HTTP API</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#5C6C70;">Mantenedor</span><span style="color:#EDF2F2;">NETHAL Drivers</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#5C6C70;">Atualizado</span><span style="font-family:'JetBrains Mono',monospace;color:#EDF2F2;">2026-06-12</span></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#5C6C70" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Overview</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#EDF2F2" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#EDF2F2"/><circle cx="11.5" cy="13" r="1" fill="#EDF2F2"/><path d="M8 9V6M16 9V6" stroke="#EDF2F2" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Equipamentos</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#5C6C70" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Ações</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Mais</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div id="1j" data-screen-label="Ações" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#1j" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">1j</a><span style="font-size:11px;color:#93A3A8;">Ações</span></div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" width="360" height="780" dark="{{ true }}" bg="#12191C" frame-color="rgba(255,255,255,0.10)" hint-size="376,796">
+        <div style="height:100%;display:flex;flex-direction:column;background:#12191C;box-sizing:border-box;">
+          <div style="padding:20px 22px 2px;">
+            <div style="font-size:22px;font-weight:600;color:#EDF2F2;">Ações</div>
+            <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;margin-top:3px;">Disponíveis conforme capabilities do driver</div>
+          </div>
+          <div style="flex:1;overflow:auto;padding:14px 16px;">
+            <div style="background:#182226;border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;">
+              <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(217,164,65,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 10-2.6 5.9" stroke="#D9A441" stroke-width="1.9" stroke-linecap="round"/><path d="M20 6v6h-6" stroke="#D9A441" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:14px;color:#EDF2F2;">Reiniciar equipamento</div><div style="font-size:11.5px;color:#5C6C70;margin-top:2px;">Interrompe conexão por ~90s</div></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#5C6C70" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(217,164,65,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M2 8.5a15 15 0 0120 0" stroke="#D9A441" stroke-width="1.9" stroke-linecap="round"/><path d="M5.5 12.5a10 10 0 0113 0" stroke="#D9A441" stroke-width="1.9" stroke-linecap="round"/><path d="M9 16.5a5 5 0 016 0" stroke="#D9A441" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="20" r="1" fill="#D9A441"/></svg></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:14px;color:#EDF2F2;">Alterar canal Wi-Fi</div><div style="font-size:11.5px;color:#5C6C70;margin-top:2px;">2.4 GHz e 5 GHz</div></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#5C6C70" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(43,110,122,0.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 15l-4-4M12 15l4-4" stroke="#8FC4CC" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="#8FC4CC" stroke-width="1.9" stroke-linecap="round"/></svg></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:14px;color:#EDF2F2;">Atualizar firmware</div><div style="font-size:11.5px;color:#5C6C70;margin-top:2px;">Versão mais recente disponível</div></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#5C6C70" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;opacity:0.5;">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="9" rx="1.5" stroke="#93A3A8" stroke-width="1.9"/><path d="M8 10V7a4 4 0 018 0v3" stroke="#93A3A8" stroke-width="1.9"/></svg></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:14px;color:#93A3A8;">Trocar senha do Wi-Fi</div><div style="font-size:11.5px;color:#5C6C70;margin-top:2px;">Não suportado pelo driver</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;height:64px;border-top:1px solid rgba(255,255,255,0.08);background:#12191C;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16a8 8 0 1116 0" stroke="#5C6C70" stroke-width="1.8"/><path d="M12 16l4-5" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Overview</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="8" rx="2" stroke="#5C6C70" stroke-width="1.8"/><circle cx="7.5" cy="13" r="1" fill="#5C6C70"/><circle cx="11.5" cy="13" r="1" fill="#5C6C70"/><path d="M8 9V6M16 9V6" stroke="#5C6C70" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Equipamentos</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;border-radius:16px;background:#1C4A54;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z" stroke="#EDF2F2" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span style="font-size:10.5px;color:#EDF2F2;font-weight:600;">Ações</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="width:56px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="#5C6C70"/><circle cx="12" cy="12" r="1.6" fill="#5C6C70"/><circle cx="18" cy="12" r="1.6" fill="#5C6C70"/></svg></div><span style="font-size:10.5px;color:#5C6C70;">Mais</span></div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+  </div>
+  <p style="margin:26px 0 0;font-size:12px;line-height:1.6;color:rgba(255,255,255,0.35);">Próximos passos: "criar Login no roteador, Erro, Não suportado, Compatibilidade" · "adicionar Modo LAB, Logs, Diagnóstico" · "Configurações, Sobre, Feedback"</p>
+</section>
+
+<section id="t2" style="padding:28px 44px 40px;border-bottom:1px solid rgba(255,255,255,0.08);">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px;">
+    <a href="#t2" style="font:600 10px 'JetBrains Mono',monospace;padding:3px 7px;background:#EDF2F2;color:#0A0F11;border-radius:4px;text-decoration:none;">2</a>
+    <span style="font:600 14px 'Space Grotesk';color:#EDF2F2;">Identidade — wordmark NETHAL</span>
+  </div>
+  <p style="font-size:12px;color:#5C6C70;margin:0 0 22px;">Quatro direções tipográficas. Sempre caixa alta, sem itálico, sem gradiente.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;">
+
+    <div id="2a" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#2a" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">2a</a><span style="font-size:11px;color:#93A3A8;">Grotesk Técnico</span><span style="font-size:9.5px;font-weight:700;letter-spacing:0.06em;color:#3EA968;background:rgba(62,169,104,0.14);padding:2px 7px;border-radius:999px;">SELECIONADO</span></div>
+      <div style="width:280px;background:#12191C;border:1px solid #2B6E7A;border-radius:16px;padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <div style="font-family:'Space Grotesk';font-weight:700;font-size:38px;letter-spacing:0.06em;color:#EDF2F2;">NETHAL</div>
+        <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;text-align:center;">Space Grotesk 700 · tracking +6%<br/>uso: app bar, docs, GitHub</div>
+      </div>
+    </div>
+
+    <div id="2b" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#2b" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">2b</a><span style="font-size:11px;color:#93A3A8;">Monoline Precision</span></div>
+      <div style="width:280px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <span style="width:7px;height:7px;background:#2B6E7A;display:inline-block;"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-weight:500;font-size:29px;letter-spacing:0.03em;color:#EDF2F2;">NETHAL</span>
+        </div>
+        <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;text-align:center;">JetBrains Mono 500<br/>uso: SDK, CLI, terminal, drivers</div>
+      </div>
+    </div>
+
+    <div id="2c" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#2c" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">2c</a><span style="font-size:11px;color:#93A3A8;">Node Mark</span></div>
+      <div style="width:280px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" stroke="#2B6E7A" stroke-width="2"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#2B6E7A"/><path d="M16 8v-2M16 26v-2M8 16H6M26 16h-2" stroke="#35B8C0" stroke-width="2" stroke-linecap="round"/></svg>
+          <span style="font-family:'Space Grotesk';font-weight:700;font-size:28px;letter-spacing:0.04em;color:#EDF2F2;">NETHAL</span>
+        </div>
+        <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;text-align:center;">Marca + wordmark<br/>uso: ícone do app, favicon, capa</div>
+      </div>
+    </div>
+
+    <div id="2d" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#2d" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">2d</a><span style="font-size:11px;color:#93A3A8;">Signal Minimal</span></div>
+      <div style="width:280px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#35B8C0;display:inline-block;"></span>
+          <span style="font-family:'Space Grotesk';font-weight:300;font-size:32px;letter-spacing:0.2em;color:#EDF2F2;">NETHAL</span>
+        </div>
+        <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;text-align:center;">Space Grotesk 300 · tracking +20%<br/>uso: splash, sobre, apresentações</div>
+      </div>
+    </div>
+
+    <div id="2e" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#2e" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">2e</a><span style="font-size:11px;color:#93A3A8;">Ícone do app</span></div>
+      <div style="width:200px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <div style="width:96px;height:96px;border-radius:24px;background:#0E2A30;display:flex;align-items:center;justify-content:center;">
+          <svg width="46" height="46" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" stroke="#2B6E7A" stroke-width="2.4"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#2B6E7A"/><path d="M16 7.5v-2M16 26.5v-2M7.5 16H5.5M26.5 16h-2" stroke="#35B8C0" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </div>
+        <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;text-align:center;">108×108dp · safe zone adaptativa</div>
+      </div>
+    </div>
+
+    <div id="2f" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#2f" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">2f</a><span style="font-size:11px;color:#93A3A8;">Marca isolada (favicon)</span><span style="font-size:9.5px;font-weight:700;letter-spacing:0.06em;color:#3EA968;background:rgba(62,169,104,0.14);padding:2px 7px;border-radius:999px;">SELECIONADO</span></div>
+      <div style="width:200px;background:#12191C;border:1px solid #2B6E7A;border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:18px;">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" stroke="#2B6E7A" stroke-width="2"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#2B6E7A"/><path d="M16 8v-2M16 26v-2M8 16H6M26 16h-2" stroke="#35B8C0" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" stroke="#2B6E7A" stroke-width="2.6"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#2B6E7A"/><path d="M16 8v-2M16 26v-2M8 16H6M26 16h-2" stroke="#35B8C0" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <svg width="18" height="18" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="9" stroke="#2B6E7A" stroke-width="3.4"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#2B6E7A"/></svg>
+        </div>
+        <div style="font:11px 'JetBrains Mono',monospace;color:#5C6C70;text-align:center;">48 · 28 · 18px — legível sem o wordmark</div>
+      </div>
+    </div>
+
+  </div>
+  <div style="margin-top:28px;display:flex;flex-direction:column;gap:9px;">
+    <div style="display:flex;align-items:baseline;gap:8px;"><span style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:#3EA968;color:#0A0F11;border-radius:5px;">OFICIAL</span><span style="font-size:11px;color:#93A3A8;">Lockup — marca 2f + wordmark 2a</span></div>
+    <div style="width:340px;background:#0E2A30;border:1px solid #2B6E7A;border-radius:16px;padding:32px 28px;display:flex;align-items:center;gap:16px;">
+      <svg width="40" height="40" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" stroke="#2B6E7A" stroke-width="2.2"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#2B6E7A"/><path d="M16 8v-2M16 26v-2M8 16H6M26 16h-2" stroke="#35B8C0" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <span style="font-family:'Space Grotesk';font-weight:700;font-size:34px;letter-spacing:0.06em;color:#EDF2F2;">NETHAL</span>
+    </div>
+  </div>
+  <p style="margin:26px 0 0;font-size:12px;line-height:1.6;color:rgba(255,255,255,0.35);">Direção adotada: wordmark <a href="#2a" style="color:#8FC4CC;">2a</a> + marca <a href="#2f" style="color:#8FC4CC;">2f</a>. Próximos passos: "aplicar lockup em todas as telas" · "gerar ícone adaptativo Android" · "mais direções"</p>
+</section>
+
+<section id="t3" style="padding:28px 44px 44px;">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px;">
+    <a href="#t3" style="font:600 10px 'JetBrains Mono',monospace;padding:3px 7px;background:#EDF2F2;color:#0A0F11;border-radius:4px;text-decoration:none;">3</a>
+    <span style="font:600 14px 'Space Grotesk';color:#EDF2F2;">Design tokens</span>
+  </div>
+  <p style="font-size:12px;color:#5C6C70;margin:0 0 22px;">Base do sistema — preparado para nomear tokens Compose (color/typography/shape).</p>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;">
+
+    <div id="3a" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#3a" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">3a</a><span style="font-size:11px;color:#93A3A8;">Cores</span></div>
+      <div style="width:420px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <sc-for list="{{ colorTokens }}" as="c" hint-placeholder-count="11">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:8px;background:{{ c.hex }};border:1px solid rgba(255,255,255,0.12);flex-shrink:0;"></div>
+            <div style="min-width:0;">
+              <div style="font-size:12.5px;color:#EDF2F2;">{{ c.name }}</div>
+              <div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;">{{ c.hex }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="3b" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#3b" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">3b</a><span style="font-size:11px;color:#93A3A8;">Tipografia</span></div>
+      <div style="width:380px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:12px;"><span style="font-family:'Space Grotesk';font-weight:600;font-size:27px;color:#EDF2F2;">HG8245Q2</span><span style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;">display 28/34 · 600</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:12px;"><span style="font-family:'Space Grotesk';font-weight:600;font-size:21px;color:#EDF2F2;">Capabilities</span><span style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;">title 22/28 · 600</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:12px;"><span style="font-family:'Space Grotesk';font-weight:400;font-size:15px;color:#EDF2F2;">Driver carregado com sucesso</span><span style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;">body 15/22</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:12px;"><span style="font-family:'Space Grotesk';font-weight:600;font-size:11px;letter-spacing:0.12em;color:#93A3A8;">DISPONÍVEL</span><span style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;">overline 11/16</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:'JetBrains Mono',monospace;font-weight:500;font-size:13px;color:#EDF2F2;">192.168.1.1 · CC:2D:E0</span><span style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;">mono 13/20</span></div>
+      </div>
+    </div>
+
+    <div id="3c" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#3c" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">3c</a><span style="font-size:11px;color:#93A3A8;">Espaço, raio, elevação</span></div>
+      <div style="width:340px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:8px;">SPACING (4pt)</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;">
+            <div style="width:4px;height:4px;background:#2B6E7A;"></div><div style="width:8px;height:8px;background:#2B6E7A;"></div><div style="width:12px;height:12px;background:#2B6E7A;"></div><div style="width:16px;height:16px;background:#2B6E7A;"></div><div style="width:20px;height:20px;background:#2B6E7A;"></div><div style="width:24px;height:24px;background:#2B6E7A;"></div><div style="width:32px;height:32px;background:#2B6E7A;"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:8px;">RADIUS</div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <div style="width:26px;height:26px;background:#182226;border:1px solid rgba(255,255,255,0.16);border-radius:6px;"></div>
+            <div style="width:26px;height:26px;background:#182226;border:1px solid rgba(255,255,255,0.16);border-radius:10px;"></div>
+            <div style="width:26px;height:26px;background:#182226;border:1px solid rgba(255,255,255,0.16);border-radius:14px;"></div>
+            <div style="width:26px;height:26px;background:#182226;border:1px solid rgba(255,255,255,0.16);border-radius:22px;"></div>
+            <div style="width:26px;height:26px;background:#182226;border:1px solid rgba(255,255,255,0.16);border-radius:999px;"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font:10px 'JetBrains Mono',monospace;color:#5C6C70;margin-bottom:8px;">ELEVATION (tonal)</div>
+          <div style="display:flex;gap:10px;">
+            <div style="flex:1;height:44px;background:#0B1113;border-radius:8px;display:flex;align-items:center;justify-content:center;font:10px 'JetBrains Mono',monospace;color:#5C6C70;">bg-0</div>
+            <div style="flex:1;height:44px;background:#12191C;border-radius:8px;display:flex;align-items:center;justify-content:center;font:10px 'JetBrains Mono',monospace;color:#93A3A8;">bg-1</div>
+            <div style="flex:1;height:44px;background:#182226;border-radius:8px;display:flex;align-items:center;justify-content:center;font:10px 'JetBrains Mono',monospace;color:#EDF2F2;">bg-2</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="3d" style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><a href="#3d" style="font:600 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(255,255,255,0.08);color:#EDF2F2;border-radius:5px;text-decoration:none;">3d</a><span style="font-size:11px;color:#93A3A8;">Estados & semântica</span></div>
+      <div style="width:300px;background:#12191C;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;gap:18px;">
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:#3EA968;display:inline-block;"></span><span style="font-size:12px;color:#93A3A8;">Online</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:#5C6C70;display:inline-block;"></span><span style="font-size:12px;color:#93A3A8;">Offline</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:#D9A441;display:inline-block;"></span><span style="font-size:12px;color:#93A3A8;">Instável</span></div>
+        </div>
+        <div style="height:1px;background:rgba(255,255,255,0.06);"></div>
+        <div style="font-size:12px;color:#93A3A8;line-height:1.6;">Motion: 200ms micro-interações · 3000ms loop de descoberta · easing padrão cubic-bezier(.2,0,0,1).</div>
+        <div style="height:1px;background:rgba(255,255,255,0.06);"></div>
+        <div style="font-size:12px;color:#93A3A8;line-height:1.6;">Verde só sucesso, âmbar só experimental, vermelho só erro — nunca decorativos.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      devices: [
+        { name: 'Huawei HG8245Q2', sub: '192.168.1.1 · CC:2D:E0:4A:9F', tag: 'Compatível', tagBg: 'rgba(62,169,104,0.14)', tagColor: '#3EA968' },
+        { name: 'TP-Link Archer AX55', sub: '192.168.1.2 · A4:2B:B0:1C:7E', tag: 'Parcial', tagBg: 'rgba(217,164,65,0.14)', tagColor: '#D9A441' },
+        { name: 'Dispositivo desconhecido', sub: '192.168.1.34 · D8:3A:DD:00:11', tag: 'Não suportado', tagBg: 'rgba(220,91,84,0.14)', tagColor: '#DC5B54' },
+      ],
+      compatModels: [
+        { name: 'Huawei HG8245Q2', current: true },
+        { name: 'Huawei HG8145V5', current: false },
+        { name: 'Huawei AX3', current: false },
+        { name: 'Huawei EG8145V5', current: false },
+      ],
+      wifiBands: [
+        { band: '2.4 GHz', ssid: 'NETHAL-Home', toggleBg: '#2B6E7A', toggleLeft: '19px', channel: '6 (auto)', width: '20 MHz', security: 'WPA2/WPA3', clients: '4' },
+        { band: '5 GHz', ssid: 'NETHAL-Home', toggleBg: '#2B6E7A', toggleLeft: '19px', channel: '44 (auto)', width: '80 MHz', security: 'WPA2/WPA3', clients: '3' },
+      ],
+      colorTokens: [
+        { name: 'Graphite BG-0', hex: '#0B1113' },
+        { name: 'Graphite BG-1', hex: '#12191C' },
+        { name: 'Graphite BG-2', hex: '#182226' },
+        { name: 'Petrol 500', hex: '#2B6E7A' },
+        { name: 'Petrol 700', hex: '#1C4A54' },
+        { name: 'Cyan Signal', hex: '#35B8C0' },
+        { name: 'Success', hex: '#3EA968' },
+        { name: 'Amber', hex: '#D9A441' },
+        { name: 'Error', hex: '#DC5B54' },
+        { name: 'Text Primary', hex: '#EDF2F2' },
+        { name: 'Text Secondary', hex: '#93A3A8' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<svg width="832" height="160" viewBox="0 0 208 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>NETHAL Lockup</title>
+  <rect x="2.5" y="2.5" width="35" height="35" rx="10" stroke="#2B6E7A" stroke-width="2.2"/>
+  <rect x="14.5" y="14.5" width="11" height="11" rx="2.75" fill="#2B6E7A"/>
+  <path d="M20 9V6.5M20 33.5V31M9 20H6.5M33.5 20H31" stroke="#35B8C0" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="48" y="29" fill="#EDF2F2" font-family="'Space Grotesk', sans-serif" font-size="34" font-weight="700" letter-spacing="0.06em">NETHAL</text>
+</svg>
