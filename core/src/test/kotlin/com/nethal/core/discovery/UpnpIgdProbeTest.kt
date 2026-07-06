@@ -58,6 +58,31 @@ class UpnpIgdProbeTest {
     }
 }
 
+class IsLanUrlTest {
+
+    @Test
+    fun `accepts urls whose host is a private rfc1918 address`() {
+        assertEquals(true, isLanUrl("http://192.168.1.1:1900/rootDesc.xml"))
+        assertEquals(true, isLanUrl("http://10.0.0.1/upnp/control/wanipc"))
+    }
+
+    @Test
+    fun `rejects urls whose host is a public ip - ssrf via malicious LOCATION`() {
+        assertEquals(false, isLanUrl("http://201.17.45.90/rootDesc.xml"))
+        assertEquals(false, isLanUrl("http://8.8.8.8/upnp/control/wanipc"))
+    }
+
+    @Test
+    fun `rejects urls with a hostname instead of a literal ip`() {
+        assertEquals(false, isLanUrl("http://attacker.example.com/rootDesc.xml"))
+    }
+
+    @Test
+    fun `rejects malformed urls instead of throwing`() {
+        assertEquals(false, isLanUrl("not a url"))
+    }
+}
+
 class PrivateIpRangesTest {
 
     @Test

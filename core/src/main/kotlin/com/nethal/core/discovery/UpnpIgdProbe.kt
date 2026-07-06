@@ -43,9 +43,11 @@ class DefaultUpnpIgdProbe(
 
     override suspend fun probeExternalIp(descriptorUrl: String): String? = withContext(Dispatchers.IO) {
         try {
+            if (!isLanUrl(descriptorUrl)) return@withContext null
             val descriptorXml = fetch(descriptorUrl) ?: return@withContext null
             val wanService = resolveWanIpConnectionService(descriptorXml, descriptorUrl)
                 ?: return@withContext null
+            if (!isLanUrl(wanService.controlUrl)) return@withContext null
             invokeGetExternalIpAddress(wanService.controlUrl, wanService.serviceType)
         } catch (_: Exception) {
             null
@@ -130,6 +132,23 @@ private fun resolveAgainstBase(baseUrl: String, relativeOrAbsolute: String): Str
     } catch (_: Exception) {
         relativeOrAbsolute
     }
+}
+
+/**
+ * Mitigação de SSRF apontada por Marisa na revisão de segurança da Feat 2: a `LOCATION` do
+ * SSDP e o `controlURL` do descritor vêm de um dispositivo não confiável na LAN. Sem essa
+ * checagem, um gateway comprometido poderia anunciar uma URL apontando para um host público e
+ * o probe faria requisições HTTP para fora da rede local usando a permissão `INTERNET`. Só
+ * prossegue quando o host resolvido é um IP RFC 1918 — hostnames e IPs públicos são rejeitados
+ * por padrão (falha segura).
+ */
+internal fun isLanUrl(url: String): Boolean {
+    val host = try {
+        URL(url).host
+    } catch (_: Exception) {
+        return false
+    }
+    return PrivateIpRanges.isPrivate(host)
 }
 
 private val SERVICE_REGEX = Regex("<service>.*?</service>", RegexOption.DOT_MATCHES_ALL)
