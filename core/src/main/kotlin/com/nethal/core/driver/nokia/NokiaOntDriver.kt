@@ -1,5 +1,6 @@
 package com.nethal.core.driver.nokia
 
+import com.nethal.core.discovery.PrivateIpRanges
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -37,6 +38,20 @@ internal class NokiaOntDriver(
     private val maxAttempts: Int = 3,
     private val backoffMillis: (attempt: Int) -> Long = { attempt -> 1_000L * attempt },
 ) {
+    /**
+     * Guarda de SSRF/credencial (mesma classe de risco que a Marisa já apontou em
+     * `UpnpIgdProbe` e `HttpFingerprintProbe`, mas aqui o risco é maior: este driver envia a
+     * credencial real do usuário, cifrada com a chave pública que o *próprio host* devolve. Se
+     * `host` não for validado, um host malicioso/público poderia devolver sua própria chave RSA
+     * e receber a credencial do usuário cifrada para si mesmo — phishing de credencial, não só
+     * requisição indevida. Falha rápido, sem tentar login, quando o host não é RFC 1918.
+     */
+    init {
+        require(PrivateIpRanges.isPrivate(host)) {
+            "NokiaOntDriver só opera contra IP privado (RFC 1918) da LAN; host recebido: $host"
+        }
+    }
+
     suspend fun readSnapshot(username: String, password: String): NokiaDriverResult = withContext(Dispatchers.IO) {
         var lastError: Throwable? = null
 

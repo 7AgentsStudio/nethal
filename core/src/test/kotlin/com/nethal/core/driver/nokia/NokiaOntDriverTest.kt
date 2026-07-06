@@ -2,12 +2,26 @@ package com.nethal.core.driver.nokia
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.security.KeyPairGenerator
 import java.util.Base64
 
 class NokiaOntDriverTest {
+
+    @Test
+    fun `rejects public host at construction - never sends credentials outside the LAN`() {
+        val transport = FakeNokiaHttpTransport(
+            loginPageBody = "",
+            loginResponses = mutableListOf(),
+            authenticatedPages = emptyMap(),
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            NokiaOntDriver("8.8.8.8", transport)
+        }
+    }
 
     private fun loginPageWithGeneratedKey(): String {
         val keyPair = KeyPairGenerator.getInstance("RSA").apply { initialize(1024) }.generateKeyPair()
