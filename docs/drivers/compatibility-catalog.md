@@ -196,6 +196,28 @@ ela precisa avisar explicitamente o usuário sobre essa limitação antes do pri
 como "este equipamento não permite verificar a autenticidade do host antes de enviar sua senha;
 use apenas na sua própria rede confiável". Não é bloqueante para o driver continuar em `DRAFT`.
 
+## Nota de mapeamento — `manufacturer` real (`ALCL`) vs. nome comercial (`Nokia`)
+
+A execução real de `nokiaManualCheck` (SIG-333) contra a unidade física confirmou que
+`/device_status.cgi` reporta `manufacturer=ALCL` — herança do fabricante original Alcatel-Lucent,
+adquirido pela Nokia em 2016, cuja base de firmware desta família de ONT GPON não foi renomeada
+internamente. Isso **não é um bug nem uma inconsistência a corrigir**: é só uma diferença entre o
+identificador interno de firmware e o nome comercial atual (`Nokia`) usado no catálogo e na UI.
+Qualquer exibição ao usuário deve continuar usando `vendor: "Nokia"` (nome comercial, já correto no
+profile); `manufacturer=ALCL` só é relevante como evidência de fingerprint interna ou nota de
+debugging, nunca como valor a expor na Tela de identificação do equipamento.
+
+## Fontes consultadas — manifesto `2026.07.08` (2026-07-06, SIG-333)
+
+- **Nokia G-1425G-B**: primeira execução real de leitura autenticada do próprio NetHAL
+  (`nokiaManualCheck`, via `NokiaOntDriver.readSnapshot`) contra a unidade física do Luiz. Não é
+  mais evidência indireta de driver irmão — é o teste que faltava, exigido por
+  `/ciclo-vida-driver` para promover de `DISCOVERY_ONLY` para `READ_ONLY_ALPHA`. Os 4 endpoints
+  (GPON, WAN, PPP, DeviceInfo) retornaram dados coerentes entre si (mesmo `serialNumber` em dois
+  endpoints, uptimes consistentes, `connectionType` idêntico em WAN e PPP), o que caracteriza
+  "capability sanity check coerente" na heurística de score, não só "endpoint respondeu".
+- **TP-Link Archer C6**: inalterado nesta rodada.
+
 ## Consumo pelo Driver Registry (fora de escopo desta entrega)
 
 O parsing/deserialização deste JSON em Kotlin, a lógica de diff incremental entre manifestos e a
@@ -244,6 +266,33 @@ contra a unidade física. Isso é declarado explicitamente no manifesto (`value:
 
 ## Changelog
 
+- **2026-07-08 (correção de sequência de estágio, decisão do Rafael)** — O `stage` do profile
+  `nokia_g1425gb_v1` avançou incorretamente na entrega anterior deste mesmo dia: o critério
+  documentado de `DRAFT → DISCOVERY_ONLY` (primeiro probe passivo real, título HTML e headers
+  capturados) nunca havia sido cumprido — os campos `html_title`/`http_headers` de
+  `fingerprintEvidence[]` continuavam `value: null` mesmo após o login autenticado real de
+  `nokiaManualCheck`. Rafael determinou que o ciclo é sequencial e não pode pular etapas: "
+  `DISCOVERY_ONLY` não é sobre completude da evidência, é sobre ter havido contato de rede real e
+  documentado antes de autenticar". Correção aplicada: `NokiaAuthenticationClient.login()` já fazia
+  um GET real na raiz do equipamento (para extrair `pubkey`/`nonce`/`csrf_token`) — este GET agora
+  também expõe título HTML e header `Server` como `NokiaDriverSnapshot.loginPageEvidence`
+  (`NokiaModels.kt`), impresso pelo `ManualCheckRunner` como "Evidência de fingerprint (Tela de
+  login)". Não é uma chamada de rede nova, só exposição de dado já obtido em memória. Com isso, o
+  `stage` do profile passa a `DISCOVERY_ONLY` (não `READ_ONLY_ALPHA`) nesta correção — os campos
+  `html_title`/`http_headers` continuam `value: null` no manifesto até o Luiz rodar
+  `nokiaManualCheck` novamente (mesmo comando de sempre) e reportar o título/header reais
+  capturados pela nova instrumentação. Assim que isso acontecer, e dado que a leitura autenticada
+  dos 4 endpoints já está validada por execução anterior, a promoção para `READ_ONLY_ALPHA` pode
+  ocorrer no mesmo ciclo, por decisão do Rafael.
+- **2026-07-08** — Primeira leitura autenticada real do próprio NetHAL contra a unidade física
+  Nokia G-1425G-B, via `nokiaManualCheck` (SIG-333), fechando parcialmente o critério documentado
+  para `DISCOVERY_ONLY → READ_ONLY_ALPHA` (ver correção de sequência acima — o probe passivo de
+  `DISCOVERY_ONLY` ainda faltava). Novo manifesto `catalog-2026.07.08.json`
+  (`previousManifest: catalog-2026.07.07.json`): `firmwareKnown` do profile `nokia_g1425gb_v1`
+  passa a incluir `softwareVersion=3FE49568IJJJ09` / `hardwareVersion=3FE49937ADAA`; as 5
+  capabilities de leitura sobem de `EXPERIMENTAL` para `AVAILABLE`; `confidenceScoreOverall` sobe
+  de `0.55` para `0.85` (recálculo item a item na nota do próprio manifesto). Documentada
+  nota de mapeamento `manufacturer=ALCL` (herança Alcatel-Lucent) vs. nome comercial `Nokia`.
 - **2026-07-07** — Corrigido modelo Nokia de `G-1425G-A` para `G-1425G-B` (a unidade física de
   teste do NetHAL, confirmada pelo Luiz, é o G-1425G-B; o manifesto anterior pesquisou o modelo
   errado). Novo manifesto `catalog-2026.07.07.json` (`previousManifest: catalog-2026.07.06.json`)
