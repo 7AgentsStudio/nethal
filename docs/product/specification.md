@@ -169,6 +169,10 @@ Funções:
 - Coletar headers HTTP.
 - Identificar MAC address quando permitido pelo sistema operacional.
 - Usar OUI para inferir fabricante quando possível.
+- Enumerar múltiplos equipamentos candidatos na sub-rede (mesh nodes, APs adicionais), não só o gateway padrão.
+- Detectar indício de duplo NAT: se o IP externo reportado pelo gateway (via UPnP IGD `WANIPConnection.ExternalIPAddress`, quando disponível) também for um IP privado, sinalizar equipamento adicional provável a montante (ex.: ONT em modo router atrás do roteador do usuário).
+
+O resultado da descoberta é sempre uma lista de equipamentos candidatos, nunca um único alvo assumido — ver `DiscoveryResult` em §13.
 
 Portas iniciais:
 
@@ -324,6 +328,8 @@ Cada driver deve declarar:
 }
 ```
 
+O Driver Registry sincroniza contra um catálogo offline versionado (ex.: `catalog-2026.07.05.json`), com diff incremental. O app verifica atualização ao abrir, se houver conexão, mas nunca bloqueia o uso offline — usa a última versão local disponível.
+
 ---
 
 ### 8.6 Capability Engine
@@ -369,6 +375,8 @@ UNSAFE
 UNKNOWN
 ```
 
+Estados diferentes de `AVAILABLE` devem sempre popular o campo `reason` (ver §13) com um motivo específico: driver não suporta a ação neste modelo, estágio do driver ainda não libera a capability, ou falta de autenticação. Capability bloqueada sem motivo explicado não deve ser exibida ao usuário.
+
 ---
 
 ### 8.7 Command Executor
@@ -394,9 +402,20 @@ O executor deve:
 - Verificar capability.
 - Verificar autenticação.
 - Solicitar confirmação.
+- Capturar o valor anterior (snapshot) antes de qualquer ação de escrita, quando o driver suportar leitura do mesmo dado — permite ao usuário reverter manualmente mesmo quando o driver não suporta rollback automatizado.
 - Executar dry-run quando possível.
 - Registrar resultado sanitizado.
 - Reverter apenas quando o driver suportar rollback.
+
+### Ações disruptivas (que derrubam a própria conexão)
+
+Reboot, restart Wi-Fi e qualquer alteração de canal, largura de banda, SSID, senha ou habilitação de rádio no mesmo rádio/SSID ao qual o celular está conectado vão derrubar a conexão usada para confirmar o resultado. O Command Executor trata essa classe como execução assíncrona, não como request/response síncrono:
+
+1. Antes de confirmar, identificar se a ação afeta o rádio/SSID atual do celular (comparar SSID/BSSID conectado com o alvo do comando).
+2. Se afetar, avisar explicitamente que a conexão vai cair por alguns segundos antes de pedir confirmação.
+3. Enviar o comando sem esperar a resposta HTTP como prova de sucesso — ela pode nunca chegar.
+4. Após a reconexão (automática, se SSID/senha não mudaram; manual, se mudaram), rodar `healthcheck(session)` para confirmar se a mudança foi aplicada.
+5. Se não houver reconexão dentro de um timeout, mostrar estado de falha ao confirmar — nunca ficar girando indefinidamente.
 
 ---
 
@@ -427,6 +446,8 @@ Ações permitidas com menor risco:
 - Alterar largura do canal.
 - Alterar DNS, com confirmação.
 - Ativar rede guest, se suportado.
+
+Todas as ações acima, quando afetam o rádio/SSID que o próprio celular usa para se conectar, seguem o fluxo de ação disruptiva descrito em §8.7 — aviso prévio de desconexão esperada e confirmação via `healthcheck` pós-reconexão, nunca via resposta HTTP síncrona.
 
 ---
 
@@ -502,18 +523,39 @@ Um driver só pode ser considerado estável quando:
 ## 10. Fluxo do Usuário Beta
 
 1. Usuário abre NetHAL Lab.
-2. App explica que é um módulo experimental.
-3. Usuário aceita termo de teste.
+2. App explica que é um módulo experimental e, antes de qualquer prompt do sistema, explica por que vai pedir permissão de localização (exigida pelo Android para ler SSID/BSSID).
+3. Usuário aceita termo de teste. O consentimento é por escopo — um aceite cobre "ler status", outro "alterar configuração", outro "reiniciar o equipamento". Não é um único aceite genérico cobrindo tudo.
+   - Antes do discovery ativo, app exige confirmação explícita separada de que a rede testada é do próprio usuário ou que ele tem autorização do responsável pela rede.
 4. App detecta gateway.
+   - Se a descoberta falhar (AP isolation, VPN ativa, rede sem gateway identificável), app mostra estado de erro dedicado com próximos passos (Tela 2b).
+   - Se o Discovery Engine encontrar mais de um equipamento candidato (mesh, AP adicional, ou indício de duplo NAT), o usuário escolhe qual testar antes do fingerprint (Tela 2c).
 5. App identifica equipamento.
-6. App mostra fabricante/modelo provável.
+6. App mostra fabricante/modelo provável e a confiança da identificação.
+   - Se a confiança for baixa, ou o usuário souber que a identificação está errada, pode corrigi-la manualmente. A correção alimenta o Compatibility Catalog.
 7. App mostra capabilities detectadas.
 8. Usuário escolhe “testar leitura”.
 9. Se necessário, informa login do roteador.
+   - Se a WebUI do equipamento aceitar só uma sessão simultânea (comum em TP-Link e outras famílias), app avisa que deixar o painel aberto no navegador pode causar falha de autenticação.
 10. App coleta dados read-only.
 11. App gera relatório.
+    - Se o driver for de uma família de CPE gerenciado por operadora (ONTs Huawei, ZTE, FiberHome, Nokia), o relatório sinaliza que alterações locais podem ser revertidas por reprovisionamento do ACS da operadora.
 12. Usuário pode enviar relatório anonimamente.
-13. Ações de escrita só aparecem se o driver permitir.
+13. Ações de escrita só aparecem se o driver permitir, sempre atrás do Safety Guard.
+    - Se a ação afetar o rádio/SSID que o próprio celular usa, app avisa da desconexão esperada antes de confirmar e mostra estado "aguardando reconexão" até confirmar o resultado (Tela 7).
+
+### Entrada e saída do programa beta
+
+Entrada:
+
+- Opt-in dentro do próprio app, sem necessidade de convite fechado no MVP.
+- App explica o que será coletado antes do opt-in (ver §8.9 Telemetry Collector).
+- Usuário recebe confirmação de que está no programa e pode revisar o que foi enviado.
+
+Saída:
+
+- Usuário pode sair do programa a qualquer momento nas configurações do app.
+- Saída interrompe novo envio de telemetria; não retroage sobre relatórios já enviados, que são anônimos e sem vínculo reversível ao usuário.
+- App deve deixar claro que dados já enviados não podem ser removidos individualmente.
 
 ---
 
@@ -525,11 +567,13 @@ Mensagem:
 
 ```text
 NetHAL Lab é uma ferramenta experimental para detectar e testar compatibilidade com roteadores, ONTs e modems na sua rede local.
+
+Para identificar sua rede, o Android exige permissão de localização. O NetHAL usa isso apenas para ler informações de Wi-Fi (SSID/BSSID) — nunca para rastrear sua localização.
 ```
 
 Ações:
 
-- Iniciar diagnóstico.
+- Iniciar diagnóstico. Bloqueado até o usuário confirmar, separadamente do termo de teste: "Esta é a minha rede, ou tenho autorização para testá-la."
 - Ver privacidade.
 - Sair.
 
@@ -547,6 +591,31 @@ Exibe:
 
 ---
 
+### Tela 2b — Falha na descoberta
+
+Exibida quando o app não consegue identificar nenhum gateway válido (AP isolation, VPN ativa, rede sem gateway).
+
+Exibe:
+
+- Motivo provável da falha.
+- Sugestões: desativar VPN, trocar de rede, informar IP do gateway manualmente.
+- Botão tentar novamente.
+
+---
+
+### Tela 2c — Múltiplos equipamentos encontrados
+
+Exibida quando o Discovery Engine encontra mais de um equipamento candidato (mesh, AP adicional) ou detecta indício de duplo NAT (gateway reportando IP externo que também é privado).
+
+Exibe:
+
+- Lista de equipamentos candidatos, com papel de cada um (gateway principal, possível equipamento a montante, nó mesh).
+- Aviso quando houver indício de duplo NAT: "Pode haver um equipamento adicional entre você e a internet (ex.: ONT da operadora)."
+- Ação: escolher qual equipamento testar.
+- Ação: adicionar equipamento manualmente por IP.
+
+---
+
 ### Tela 3 — Equipamento detectado
 
 Exibe:
@@ -556,19 +625,24 @@ Exibe:
 - Firmware, se disponível.
 - Protocolo detectado.
 - Confiança da identificação.
+- Data da última atualização do catálogo de fingerprints, para o usuário saber se a identificação pode estar desatualizada.
+
+Ações:
+
+- Corrigir identificação manualmente (fabricante/modelo), disponível quando a confiança for baixa ou o usuário souber que a identificação está errada. A correção alimenta o Compatibility Catalog.
 
 ---
 
 ### Tela 4 — Capabilities
 
-Exibe lista:
+Exibe lista. Todo item que não estiver `AVAILABLE` mostra o motivo (campo `reason`, ver §13), não só o estado:
 
 ```text
 Ler Wi-Fi: disponível
 Ler WAN: disponível
 Clientes conectados: requer login
-Alterar canal: experimental
-Trocar senha: indisponível
+Alterar canal: experimental (estágio do driver: read-only beta)
+Trocar senha: indisponível (driver não suporta esta ação neste modelo)
 Reiniciar: disponível
 ```
 
@@ -582,6 +656,7 @@ Campos:
 - Senha.
 - Botão testar.
 - Aviso de que a senha não será salva.
+- Aviso de que, em equipamentos que aceitam só uma sessão simultânea (comum em TP-Link e outras famílias), deixar a WebUI aberta no navegador pode causar falha de autenticação.
 
 ---
 
@@ -594,7 +669,22 @@ Exibe:
 - Capabilities.
 - Erros.
 - Driver usado.
+- Aviso de reprovisionamento por operadora, quando o driver for de uma família de CPE-ISP (Huawei, ZTE, FiberHome, Nokia): alterações locais podem ser revertidas pelo ACS.
 - Botão enviar relatório anônimo.
+
+---
+
+### Tela 7 — Ação em andamento (desconexão esperada)
+
+Exibida ao confirmar uma ação que deve derrubar a conexão do próprio celular (troca de canal/banda/SSID/senha, restart Wi-Fi, reboot).
+
+Exibe:
+
+- Aviso: "Sua conexão pode cair por alguns segundos. O app vai confirmar o resultado assim que a rede voltar."
+- Valor anterior → valor novo, para referência caso precise reverter manualmente.
+- Se SSID/senha mudou: exibe a nova credencial na tela, apenas em memória, para o usuário reconectar manualmente — nunca persistida, nunca logada.
+- Status: aguardando reconexão / confirmado / falha ao confirmar (timeout).
+- Botão reverter, disponível quando o driver suportar a mesma escrita e o equipamento estiver alcançável de novo.
 
 ---
 
@@ -619,6 +709,23 @@ interface NetHAL {
 ---
 
 ## 13. Modelo de Dados
+
+### DiscoveryResult
+
+```typescript
+type DiscoveryResult = {
+  devices: NetworkTarget[];
+  possibleDoubleNat: boolean;
+};
+
+type NetworkTarget = {
+  ip: string;
+  role: "PRIMARY_GATEWAY" | "UPSTREAM_CANDIDATE" | "MESH_NODE" | "MANUAL";
+  source: "GATEWAY" | "SSDP" | "MDNS" | "USER_INPUT";
+};
+```
+
+`discover()` sempre retorna uma lista, mesmo quando só um equipamento é encontrado. `fingerprint(target)` recebe um `NetworkTarget` específico dessa lista — a aplicação nunca assume um único alvo implícito.
 
 ### DeviceInfo
 
@@ -663,6 +770,8 @@ type Capability = {
   reason?: string;
 };
 ```
+
+Convenção: `reason` é opcional apenas para `AVAILABLE`. Para os demais estados, é obrigatório na prática — é o texto exibido na Tela 4 (§11).
 
 ---
 
