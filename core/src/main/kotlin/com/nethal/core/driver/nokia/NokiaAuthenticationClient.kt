@@ -1,5 +1,6 @@
 package com.nethal.core.driver.nokia
 
+import com.nethal.core.auth.AuthenticationStrategy
 import java.io.IOException
 import java.net.URLEncoder
 
@@ -20,6 +21,13 @@ internal class NokiaLoginException(
     message: String,
 ) : IOException(message)
 
+/** Estado de sessão pós-login: `sid` (sessão atual), `lsid` (sessão legada) e idioma da UI. */
+internal data class NokiaSession(
+    val sessionId: String,
+    val legacySessionId: String,
+    val language: String,
+)
+
 /**
  * Sessão autenticada contra um Nokia G-1425G-B. A credencial (`username`/`password`) só existe
  * como parâmetro de `login()` e como variável local durante o handshake — nunca é armazenada em
@@ -39,7 +47,7 @@ internal class NokiaAuthenticationClient(
     private val host: String,
     private val transport: NokiaHttpTransport = DefaultNokiaHttpTransport(),
     private val clock: () -> Long = System::currentTimeMillis,
-) {
+) : AuthenticationStrategy<NokiaSession> {
     private val baseUrl = "http://$host"
 
     private var sessionId: String = ""
@@ -58,7 +66,7 @@ internal class NokiaAuthenticationClient(
     val isAuthenticated: Boolean get() = sessionId.isNotEmpty()
 
     @Throws(IOException::class)
-    fun login(username: String, password: String) {
+    override fun login(username: String, password: String): NokiaSession {
         val loginPage = transport.get("$baseUrl/?t=${clock()}&lang=eng")
         val html = loginPage.body
 
@@ -106,7 +114,7 @@ internal class NokiaAuthenticationClient(
             sessionId = resolvedSessionId
             legacySessionId = response.cookies["lsid"]?.trim().orEmpty()
             language = response.cookies["lang"]?.trim()?.ifEmpty { "eng" } ?: "eng"
-            return
+            return NokiaSession(sessionId, legacySessionId, language)
         }
 
         val errT = Regex("""err_t\s*=\s*\[([^\]]*)]""").find(response.body)?.groupValues?.get(1)?.trim()
@@ -122,16 +130,16 @@ internal class NokiaAuthenticationClient(
     @Throws(IOException::class)
     fun fetchAuthenticated(path: String): String {
         check(isAuthenticated) { "fetchAuthenticated chamado antes de login() bem-sucedido" }
-        return transport.get("$baseUrl$path", sessionHeaders()).body
+        return transport.get("$baseUrl$path", authenticatedHeaders(NokiaSession(sessionId, legacySessionId, language))).body
     }
 
-    private fun sessionHeaders(): Map<String, String> {
-        val cookieParts = mutableListOf("lang=$language")
-        if (sessionId.isNotEmpty()) cookieParts.add(0, "sid=$sessionId")
-        if (legacySessionId.isNotEmpty()) cookieParts.add("lsid=$legacySessionId")
+    override fun authenticatedHeaders(session: NokiaSession): Map<String, String> {
+        val cookieParts = mutableListOf("lang=${session.language}")
+        if (session.sessionId.isNotEmpty()) cookieParts.add(0, "sid=${session.sessionId}")
+        if (session.legacySessionId.isNotEmpty()) cookieParts.add("lsid=${session.legacySessionId}")
         return mapOf(
             "Cookie" to cookieParts.joinToString("; "),
-            "X-SID" to sessionId,
+            "X-SID" to session.sessionId,
             "Referer" to "$baseUrl/",
             "X-Requested-With" to "XMLHttpRequest",
         )

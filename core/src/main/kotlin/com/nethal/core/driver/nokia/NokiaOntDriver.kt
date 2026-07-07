@@ -1,11 +1,12 @@
 package com.nethal.core.driver.nokia
 
 import com.nethal.core.discovery.PrivateIpRanges
+import com.nethal.core.driver.NetworkFailureReason
+import com.nethal.core.driver.RetryOutcome
+import com.nethal.core.driver.classifyNetworkFailure
+import com.nethal.core.driver.executeWithRetry
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.net.ConnectException
-import java.net.SocketTimeoutException
 
 /** Motivo de falha do driver após esgotar as tentativas de retry — vocabulário para a UI decidir a mensagem. */
 internal enum class NokiaDriverFailureReason {
@@ -53,60 +54,59 @@ internal class NokiaOntDriver(
     }
 
     suspend fun readSnapshot(username: String, password: String): NokiaDriverResult = withContext(Dispatchers.IO) {
-        var lastError: Throwable? = null
-
-        repeat(maxAttempts) { attemptIndex ->
-            if (attemptIndex > 0) delay(backoffMillis(attemptIndex))
-            try {
-                val client = NokiaAuthenticationClient(host, transport)
-                client.login(username, password)
-
-                val gponHtml = client.fetchAuthenticated("/wan_status.cgi?gpon")
-                val wanHtml = client.fetchAuthenticated("/show_wan_status.cgi?ipv4")
-                val pppJson = client.fetchAuthenticated("/index.cgi?getppp")
-                val deviceJson = client.fetchAuthenticated("/device_status.cgi")
-
-                return@withContext NokiaDriverResult.Success(
-                    NokiaDriverSnapshot(
-                        gpon = NokiaResponseParser.parseGponStatus(gponHtml),
-                        wan = NokiaResponseParser.parseWanStatus(wanHtml),
-                        ppp = NokiaResponseParser.parsePppStatus(pppJson),
-                        deviceInfo = NokiaResponseParser.parseDeviceInfo(deviceJson),
-                        loginPageEvidence = client.loginPageEvidence,
-                    ),
-                )
-            } catch (e: NokiaLoginException) {
+        val outcome = executeWithRetry(
+            maxAttempts = maxAttempts,
+            backoffMillis = backoffMillis,
+            loginExceptionType = NokiaLoginException::class.java,
+            onLoginFailure = { e ->
                 // Falha de credencial ou sessão em uso não se resolve por retry — falha rápido,
                 // sem gastar as 3 tentativas à toa (token expirado é a única exceção que se
                 // beneficia de retry, porque a próxima tentativa recaptura nonce/csrf do zero).
                 when (e.reason) {
-                    NokiaLoginFailureReason.INVALID_CREDENTIALS ->
-                        return@withContext NokiaDriverResult.Failure(NokiaDriverFailureReason.INVALID_CREDENTIALS, e.message.orEmpty())
-                    NokiaLoginFailureReason.SESSION_IN_USE ->
-                        return@withContext NokiaDriverResult.Failure(NokiaDriverFailureReason.SESSION_IN_USE, e.message.orEmpty())
-                    NokiaLoginFailureReason.TOKEN_EXPIRED, NokiaLoginFailureReason.UNKNOWN ->
-                        lastError = e
+                    NokiaLoginFailureReason.INVALID_CREDENTIALS -> NokiaDriverFailureReason.INVALID_CREDENTIALS
+                    NokiaLoginFailureReason.SESSION_IN_USE -> NokiaDriverFailureReason.SESSION_IN_USE
+                    NokiaLoginFailureReason.TOKEN_EXPIRED, NokiaLoginFailureReason.UNKNOWN -> null
                 }
-            } catch (t: Throwable) {
-                lastError = t
-            }
+            },
+            classifyFinalFailure = ::classifyFailure,
+        ) {
+            val client = NokiaAuthenticationClient(host, transport)
+            client.login(username, password)
+
+            val gponHtml = client.fetchAuthenticated("/wan_status.cgi?gpon")
+            val wanHtml = client.fetchAuthenticated("/show_wan_status.cgi?ipv4")
+            val pppJson = client.fetchAuthenticated("/index.cgi?getppp")
+            val deviceJson = client.fetchAuthenticated("/device_status.cgi")
+
+            NokiaDriverSnapshot(
+                gpon = NokiaResponseParser.parseGponStatus(gponHtml),
+                wan = NokiaResponseParser.parseWanStatus(wanHtml),
+                ppp = NokiaResponseParser.parsePppStatus(pppJson),
+                deviceInfo = NokiaResponseParser.parseDeviceInfo(deviceJson),
+                loginPageEvidence = client.loginPageEvidence,
+            )
         }
 
-        val error = lastError ?: return@withContext NokiaDriverResult.Failure(
-            NokiaDriverFailureReason.COMMUNICATION_ERROR,
-            "falha desconhecida apos $maxAttempts tentativas",
-        )
-        NokiaDriverResult.Failure(classifyFailure(error), error.message ?: error.toString())
+        when (outcome) {
+            is RetryOutcome.Success -> NokiaDriverResult.Success(outcome.value)
+            is RetryOutcome.Failure -> NokiaDriverResult.Failure(outcome.reason, outcome.error.message ?: outcome.error.toString())
+        }
     }
 
+    /**
+     * Classifica o erro final: primeiro checagens específicas do handshake RSA+AES deste driver
+     * (pubkey/nonce/csrf ausentes na página de login), depois a classificação de rede genérica
+     * compartilhada.
+     */
     private fun classifyFailure(error: Throwable): NokiaDriverFailureReason = when {
-        error is ConnectException -> NokiaDriverFailureReason.DEVICE_UNREACHABLE
-        error is SocketTimeoutException -> NokiaDriverFailureReason.TIMEOUT
-        error.message?.contains("timed out", ignoreCase = true) == true -> NokiaDriverFailureReason.TIMEOUT
-        error.message?.contains("refused", ignoreCase = true) == true -> NokiaDriverFailureReason.DEVICE_UNREACHABLE
         error.message?.contains("pubkey") == true ||
             error.message?.contains("nonce") == true ||
             error.message?.contains("csrf") == true -> NokiaDriverFailureReason.UNEXPECTED_RESPONSE
-        else -> NokiaDriverFailureReason.COMMUNICATION_ERROR
+        else -> when (classifyNetworkFailure(error)) {
+            NetworkFailureReason.DEVICE_UNREACHABLE -> NokiaDriverFailureReason.DEVICE_UNREACHABLE
+            NetworkFailureReason.TIMEOUT -> NokiaDriverFailureReason.TIMEOUT
+            NetworkFailureReason.UNEXPECTED_RESPONSE -> NokiaDriverFailureReason.UNEXPECTED_RESPONSE
+            NetworkFailureReason.COMMUNICATION_ERROR -> NokiaDriverFailureReason.COMMUNICATION_ERROR
+        }
     }
 }

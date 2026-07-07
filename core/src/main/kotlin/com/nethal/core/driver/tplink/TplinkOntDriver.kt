@@ -1,11 +1,12 @@
 package com.nethal.core.driver.tplink
 
 import com.nethal.core.discovery.PrivateIpRanges
+import com.nethal.core.driver.NetworkFailureReason
+import com.nethal.core.driver.RetryOutcome
+import com.nethal.core.driver.classifyNetworkFailure
+import com.nethal.core.driver.executeWithRetry
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.net.ConnectException
-import java.net.SocketTimeoutException
 
 /** Motivo de falha do driver após esgotar as tentativas — vocabulário para a UI decidir a mensagem. */
 internal enum class TplinkDriverFailureReason {
@@ -55,57 +56,56 @@ internal class TplinkOntDriver(
     }
 
     suspend fun readSnapshot(username: String, password: String): TplinkDriverResult = withContext(Dispatchers.IO) {
-        var lastError: Throwable? = null
-
-        repeat(maxAttempts) { attemptIndex ->
-            if (attemptIndex > 0) delay(backoffMillis(attemptIndex))
-            try {
-                val client = TplinkAuthenticationClient(host, transport, cipherVariant)
-                client.login(username, password)
-
-                val deviceInfoJson = client.fetchAuthenticated("/cgi/getDeviceInfo")
-                val wanJson = client.fetchAuthenticated("/cgi/getWanStatus")
-                val wifiJson = client.fetchAuthenticated("/cgi/getWifiStatus")
-                val clientsJson = client.fetchAuthenticated("/cgi/getConnectedClients")
-
-                return@withContext TplinkDriverResult.Success(
-                    TplinkDriverSnapshot(
-                        deviceInfo = TplinkResponseParser.parseDeviceInfo(deviceInfoJson),
-                        wan = TplinkResponseParser.parseWanStatus(wanJson),
-                        wifi = TplinkResponseParser.parseWifiStatus(wifiJson),
-                        connectedClients = TplinkResponseParser.parseConnectedClients(clientsJson),
-                    ),
-                )
-            } catch (e: TplinkLoginException) {
+        val outcome = executeWithRetry(
+            maxAttempts = maxAttempts,
+            backoffMillis = backoffMillis,
+            loginExceptionType = TplinkLoginException::class.java,
+            onLoginFailure = { e ->
                 // Falha de credencial ou sessão em uso não se resolve por retry — falha rápido,
                 // preservando a única retentativa disponível para erro de comunicação transitório.
                 when (e.reason) {
-                    TplinkLoginFailureReason.INVALID_CREDENTIALS ->
-                        return@withContext TplinkDriverResult.Failure(TplinkDriverFailureReason.INVALID_CREDENTIALS, e.message.orEmpty())
-                    TplinkLoginFailureReason.SESSION_IN_USE ->
-                        return@withContext TplinkDriverResult.Failure(TplinkDriverFailureReason.SESSION_IN_USE, e.message.orEmpty())
-                    TplinkLoginFailureReason.UNEXPECTED_RESPONSE, TplinkLoginFailureReason.UNKNOWN ->
-                        lastError = e
+                    TplinkLoginFailureReason.INVALID_CREDENTIALS -> TplinkDriverFailureReason.INVALID_CREDENTIALS
+                    TplinkLoginFailureReason.SESSION_IN_USE -> TplinkDriverFailureReason.SESSION_IN_USE
+                    TplinkLoginFailureReason.UNEXPECTED_RESPONSE, TplinkLoginFailureReason.UNKNOWN -> null
                 }
-            } catch (t: Throwable) {
-                lastError = t
-            }
+            },
+            classifyFinalFailure = ::classifyFailure,
+        ) {
+            val client = TplinkAuthenticationClient(host, transport, cipherVariant)
+            client.login(username, password)
+
+            val deviceInfoJson = client.fetchAuthenticated("/cgi/getDeviceInfo")
+            val wanJson = client.fetchAuthenticated("/cgi/getWanStatus")
+            val wifiJson = client.fetchAuthenticated("/cgi/getWifiStatus")
+            val clientsJson = client.fetchAuthenticated("/cgi/getConnectedClients")
+
+            TplinkDriverSnapshot(
+                deviceInfo = TplinkResponseParser.parseDeviceInfo(deviceInfoJson),
+                wan = TplinkResponseParser.parseWanStatus(wanJson),
+                wifi = TplinkResponseParser.parseWifiStatus(wifiJson),
+                connectedClients = TplinkResponseParser.parseConnectedClients(clientsJson),
+            )
         }
 
-        val error = lastError ?: return@withContext TplinkDriverResult.Failure(
-            TplinkDriverFailureReason.COMMUNICATION_ERROR,
-            "falha desconhecida apos $maxAttempts tentativas",
-        )
-        TplinkDriverResult.Failure(classifyFailure(error), error.message ?: error.toString())
+        when (outcome) {
+            is RetryOutcome.Success -> TplinkDriverResult.Success(outcome.value)
+            is RetryOutcome.Failure -> TplinkDriverResult.Failure(outcome.reason, outcome.error.message ?: outcome.error.toString())
+        }
     }
 
+    /**
+     * Classifica o erro final (após esgotar tentativas, ou `UNEXPECTED_RESPONSE`/`UNKNOWN` de
+     * login que não se beneficia de fast-fail): primeiro checagens específicas do handshake
+     * RSA+AES deste driver, depois a classificação de rede genérica compartilhada.
+     */
     private fun classifyFailure(error: Throwable): TplinkDriverFailureReason = when {
-        error is ConnectException -> TplinkDriverFailureReason.DEVICE_UNREACHABLE
-        error is SocketTimeoutException -> TplinkDriverFailureReason.TIMEOUT
-        error.message?.contains("timed out", ignoreCase = true) == true -> TplinkDriverFailureReason.TIMEOUT
-        error.message?.contains("refused", ignoreCase = true) == true -> TplinkDriverFailureReason.DEVICE_UNREACHABLE
         error.message?.contains("getParm") == true ||
             error.message?.contains("RSA") == true -> TplinkDriverFailureReason.UNEXPECTED_RESPONSE
-        else -> TplinkDriverFailureReason.COMMUNICATION_ERROR
+        else -> when (classifyNetworkFailure(error)) {
+            NetworkFailureReason.DEVICE_UNREACHABLE -> TplinkDriverFailureReason.DEVICE_UNREACHABLE
+            NetworkFailureReason.TIMEOUT -> TplinkDriverFailureReason.TIMEOUT
+            NetworkFailureReason.UNEXPECTED_RESPONSE -> TplinkDriverFailureReason.UNEXPECTED_RESPONSE
+            NetworkFailureReason.COMMUNICATION_ERROR -> TplinkDriverFailureReason.COMMUNICATION_ERROR
+        }
     }
 }

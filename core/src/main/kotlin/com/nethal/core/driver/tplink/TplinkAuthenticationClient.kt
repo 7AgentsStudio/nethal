@@ -1,5 +1,6 @@
 package com.nethal.core.driver.tplink
 
+import com.nethal.core.auth.AuthenticationStrategy
 import java.io.IOException
 import java.security.SecureRandom
 
@@ -58,7 +59,7 @@ internal class TplinkAuthenticationClient(
     private val transport: TplinkHttpTransport = DefaultTplinkHttpTransport(),
     private val cipherVariant: TplinkCipherVariant = TplinkCipherVariant.AES_CBC,
     private val random: SecureRandom = SecureRandom(),
-) {
+) : AuthenticationStrategy<Map<String, String>> {
     private val baseUrl = "http://$host"
 
     /**
@@ -74,7 +75,7 @@ internal class TplinkAuthenticationClient(
     val isAuthenticated: Boolean get() = sessionCookies.isNotEmpty()
 
     @Throws(IOException::class)
-    fun login(username: String, password: String) {
+    override fun login(username: String, password: String): Map<String, String> {
         val params = fetchRsaParams()
 
         val aesKey = TplinkAuthCrypto.generateSecureBytes(16, random)
@@ -111,7 +112,7 @@ internal class TplinkAuthenticationClient(
 
         if (bodyLooksSuccessful && response.cookies.isNotEmpty()) {
             sessionCookies = response.cookies
-            return
+            return sessionCookies
         }
 
         if (!bodyLooksSuccessful && response.cookies.isNotEmpty()) {
@@ -126,12 +127,12 @@ internal class TplinkAuthenticationClient(
     @Throws(IOException::class)
     fun fetchAuthenticated(path: String): String {
         check(isAuthenticated) { "fetchAuthenticated chamado antes de login() bem-sucedido" }
-        return transport.get("$baseUrl$path", sessionHeaders()).body
+        return transport.get("$baseUrl$path", authenticatedHeaders(sessionCookies)).body
     }
 
-    private fun sessionHeaders(): Map<String, String> {
-        if (sessionCookies.isEmpty()) return emptyMap()
-        return mapOf("Cookie" to sessionCookies.entries.joinToString("; ") { "${it.key}=${it.value}" })
+    override fun authenticatedHeaders(session: Map<String, String>): Map<String, String> {
+        if (session.isEmpty()) return emptyMap()
+        return mapOf("Cookie" to session.entries.joinToString("; ") { "${it.key}=${it.value}" })
     }
 
     /**
