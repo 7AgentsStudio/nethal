@@ -11,7 +11,25 @@ interface DriverRegistry {
     fun manifestVersion(): String
     fun generatedAt(): String
     fun profiles(): List<CompatibilityProfile>
+
+    /**
+     * Devolve TODOS os profiles que casam com vendor+modelo (case-insensitive). O catálogo não
+     * garante unicidade por vendor+modelo — dois profiles reais podem coexistir para o mesmo
+     * vendor/modelo comercial quando representam plataformas distintas (ex.: `tplink_archer_c6_v1`
+     * vs. `tplink_archer_c6_stok_v1`, ver `docs/architecture/hal-layering-model.md` §9.1). Qualquer
+     * chamador que precise decidir entre profiles ambíguos (ex.: fluxo de identificação manual,
+     * Tela 3 da spec §11) deve usar este método, não `findProfile`.
+     */
+    fun findProfiles(vendor: String, model: String): List<CompatibilityProfile>
+
+    /**
+     * Atalho para o caso comum de vendor+modelo com um único profile no catálogo. Quando há mais
+     * de um profile para a mesma combinação, devolve o primeiro do manifesto (ordem arbitrária) —
+     * isso é uma escolha silenciosa, não uma resolução de ambiguidade. Prefira `findProfiles`
+     * sempre que o chamador precisar decidir entre profiles concorrentes.
+     */
     fun findProfile(vendor: String, model: String): CompatibilityProfile?
+
     fun profilesForVendor(vendor: String): List<CompatibilityProfile>
 }
 
@@ -67,10 +85,13 @@ class DefaultDriverRegistry(
 
     override fun profiles(): List<CompatibilityProfile> = currentManifest.profiles
 
-    override fun findProfile(vendor: String, model: String): CompatibilityProfile? =
-        currentManifest.profiles.firstOrNull {
+    override fun findProfiles(vendor: String, model: String): List<CompatibilityProfile> =
+        currentManifest.profiles.filter {
             it.vendor.equals(vendor, ignoreCase = true) && it.model.equals(model, ignoreCase = true)
         }
+
+    override fun findProfile(vendor: String, model: String): CompatibilityProfile? =
+        findProfiles(vendor, model).firstOrNull()
 
     override fun profilesForVendor(vendor: String): List<CompatibilityProfile> =
         currentManifest.profiles.filter { it.vendor.equals(vendor, ignoreCase = true) }

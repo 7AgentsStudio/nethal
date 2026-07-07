@@ -18,6 +18,8 @@ class DriverRegistryTest {
         assertEquals(4, registry.profiles().size)
     }
 
+    // Nota: "TP-Link"/"Archer C6" tem dois profiles no catálogo (ver teste de ambiguidade abaixo).
+    // Este teste cobre só o case-insensitive match, não a resolução de ambiguidade.
     @Test
     fun `finds profile by vendor and model case-insensitively`() {
         val registry = DefaultDriverRegistry(embeddedManifestLoader = ::loadEmbeddedCatalogResource)
@@ -34,6 +36,34 @@ class DriverRegistryTest {
         val registry = DefaultDriverRegistry(embeddedManifestLoader = ::loadEmbeddedCatalogResource)
 
         assertNull(registry.findProfile("Huawei", "HG8245"))
+    }
+
+    /**
+     * Reproduz o gap documentado em `docs/architecture/hal-layering-model.md` §9.1: o catálogo
+     * embarcado tem dois profiles reais para o mesmo vendor+modelo (TP-Link/Archer C6) —
+     * `tplink_archer_c6_v1` (mecanismo antigo, REFUTED) e `tplink_archer_c6_stok_v1` (mecanismo
+     * novo, DISCOVERY_ONLY). `findProfiles` deve devolver os dois, sem descartar nenhum.
+     */
+    @Test
+    fun `findProfiles returns every profile that matches vendor and model, including ambiguous TP-Link Archer C6 case`() {
+        val registry = DefaultDriverRegistry(embeddedManifestLoader = ::loadEmbeddedCatalogResource)
+
+        val matches = registry.findProfiles("TP-Link", "Archer C6")
+
+        assertEquals(2, matches.size)
+        assertEquals(
+            setOf("tplink_archer_c6_v1", "tplink_archer_c6_stok_v1"),
+            matches.map { it.profileId }.toSet(),
+        )
+    }
+
+    @Test
+    fun `findProfile keeps returning a single result for the ambiguous TP-Link Archer C6 case`() {
+        val registry = DefaultDriverRegistry(embeddedManifestLoader = ::loadEmbeddedCatalogResource)
+
+        val tplink = registry.findProfile("TP-Link", "Archer C6")
+
+        assertEquals("tplink_archer_c6_v1", tplink?.profileId)
     }
 
     @Test
