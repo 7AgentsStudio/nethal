@@ -77,12 +77,14 @@ import javax.crypto.spec.SecretKeySpec
  * URL-encoding. Ou seja: o que entra na conta é o **comprimento da string Base64** do campo
  * `data`, não o tamanho do ciphertext bruto em bytes.
  *
- * **Hash MD5 do campo `sign` — confirmado por correlação exata com o login real do Luiz**:
+ * **Hash MD5 do campo `sign` — fórmula confirmada por correlação exata contra um login real**:
  * `h=f6fdffe48c908deb0f4c3bd36c032e72` do exemplo capturado bate exatamente com
- * `md5("adminadmin")`, isto é, `md5(username + password)` quando usuário e senha são ambos
- * `admin` — exatamente a convenção já documentada pela lib de referência `tplinkrouterc6u`.
- * Isso fecha a última lacuna que ainda restava no envelope `sign`: apesar de o firmware não exibir
- * um campo de usuário no formulário HTML, o hash do `sign` continua incluindo `username`.
+ * `md5(username + password)` usando o valor de usuário fixo/interno deste firmware — a convenção
+ * já documentada pela lib de referência `tplinkrouterc6u`. Isso fecha a última lacuna que ainda
+ * restava no envelope `sign`: apesar de o firmware não exibir um campo de usuário no formulário
+ * HTML, o hash do `sign` continua incluindo um `username` interno fixo (não exposto na UI, não
+ * fornecido pelo usuário) — nunca vazio. A credencial real usada para essa correlação não é
+ * reproduzida aqui (nunca persistir senha de equipamento em código versionado, ver `SECURITY.md`).
  */
 internal object TpLinkStokLuciCrypto {
 
