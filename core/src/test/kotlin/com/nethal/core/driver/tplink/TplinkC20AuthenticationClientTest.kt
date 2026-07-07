@@ -75,6 +75,17 @@ class TplinkC20AuthenticationClientTest {
     }
 
     @Test
+    fun `login maps error code zero without modelName field to UNEXPECTED_RESPONSE, not INVALID_CREDENTIALS`() {
+        val transport = FakeTplinkC20HttpTransport(defaultResponse = globalErrorResponse(code = 0))
+        val client = TplinkC20AuthenticationClient("192.168.0.1", transport)
+
+        val exception = assertThrows(TplinkC20LoginException::class.java) {
+            client.login("admin", "secret")
+        }
+        assertEquals(TplinkC20LoginFailureReason.UNEXPECTED_RESPONSE, exception.reason)
+    }
+
+    @Test
     fun `login maps response without recognizable error marker to UNEXPECTED_RESPONSE`() {
         val transport = FakeTplinkC20HttpTransport(
             defaultResponse = TplinkHttpResponse(200, "", emptyMap(), emptyMap()),

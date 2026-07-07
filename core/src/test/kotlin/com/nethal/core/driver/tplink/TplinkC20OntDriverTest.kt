@@ -83,9 +83,9 @@ class TplinkC20OntDriverTest {
         assertEquals(4, snapshot.deviceInfo?.numberOfVirtualPorts)
         assertEquals("ETH", snapshot.deviceInfo?.mode)
         assertEquals(2, snapshot.wifi.size)
-        assertEquals("Luiz-2.4G", snapshot.wifi[0].ssid)
+        assertEquals("Casa-2.4G", snapshot.wifi[0].ssid)
         assertEquals(1, snapshot.connectedClients.size)
-        assertEquals("74:56:3C:**:**:**", snapshot.connectedClients.first().macAddressMasked)
+        assertEquals("AA:BB:CC:**:**:**", snapshot.connectedClients.first().macAddressMasked)
     }
 
     @Test

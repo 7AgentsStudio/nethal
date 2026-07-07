@@ -98,6 +98,10 @@ internal class TplinkC20AuthenticationClient(
                 TplinkC20LoginFailureReason.UNEXPECTED_RESPONSE,
                 "login falhou: resposta sem marcador [error] reconhecido",
             )
+            errorCode == 0 -> throw TplinkC20LoginException(
+                TplinkC20LoginFailureReason.UNEXPECTED_RESPONSE,
+                "login falhou: [error]0 mas resposta não contém modelName= (seção ausente/malformada, não é credencial inválida)",
+            )
             else -> throw TplinkC20LoginException(
                 TplinkC20LoginFailureReason.INVALID_CREDENTIALS,
                 "login falhou: [error]$errorCode",

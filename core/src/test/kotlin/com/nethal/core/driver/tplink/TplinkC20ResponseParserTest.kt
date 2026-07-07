@@ -77,9 +77,9 @@ class TplinkC20ResponseParserTest {
 
         assertEquals(2, radios.size)
         assertEquals("wlan0", radios[0].name)
-        assertEquals("Luiz-2.4G", radios[0].ssid)
+        assertEquals("Casa-2.4G", radios[0].ssid)
         assertEquals("wlan5", radios[1].name)
-        assertEquals("Luiz-5G", radios[1].ssid)
+        assertEquals("Casa-5G", radios[1].ssid)
     }
 
     @Test
@@ -90,9 +90,9 @@ class TplinkC20ResponseParserTest {
 
         assertEquals(1, clients.size)
         val client = clients.first()
-        assertEquals("Luiz-PC", client.hostname)
+        assertEquals("Notebook-Teste", client.hostname)
         assertEquals("192.168.0.100", client.ipAddress)
-        assertEquals("74:56:3C:**:**:**", client.macAddressMasked)
+        assertEquals("AA:BB:CC:**:**:**", client.macAddressMasked)
         assertEquals(6231L, client.leaseTimeRemainingSeconds)
     }
 
@@ -107,7 +107,7 @@ class TplinkC20ResponseParserTest {
 
     @Test
     fun `parseConnectedClients returns empty list when IPAddress field is absent - defensive, not exception`() {
-        val body = "[1,0,0,0,0,0]0\nMACAddress=74:56:3C:39:F3:95\nhostName=x\n[error]0"
+        val body = "[1,0,0,0,0,0]0\nMACAddress=AA:BB:CC:DD:EE:FF\nhostName=x\n[error]0"
 
         assertEquals(emptyList<TplinkC20ConnectedClient>(), TplinkC20ResponseParser.parseConnectedClients(body, lanHostEntryIndex = 0))
     }

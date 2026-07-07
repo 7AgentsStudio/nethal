@@ -5,7 +5,7 @@ package com.nethal.core.driver.tplink
  * captura via DevTools contra unidade física do Luiz (2026-07-06, ver SIG-337/SIG-338).
  *
  * Diferente do mecanismo anterior (POST de login separado + GET de páginas), o protocolo real usa
- * um único dispatcher `POST /cgi?...`, sempre com o cookie `Authorization` (via `initCookies`).
+ * um único dispatcher `POST /cgi?...`, sempre com o cookie `Authorization` (via `cookies`).
  * Este fake responde com base na credencial recebida: se bater com [expectedAuthorizationCookie],
  * devolve a resposta configurada para o corpo de request recebido (via [responsesByRequestBody]);
  * caso contrário, simula uma falha HTTP 401 (comportamento padrão de HTTP Basic Auth, não
@@ -31,10 +31,10 @@ internal class FakeTplinkC20HttpTransport(
         return TplinkHttpResponse(404, "", emptyMap(), emptyMap())
     }
 
-    override fun post(url: String, body: String, initCookies: Map<String, String>): TplinkHttpResponse {
+    override fun post(url: String, body: String, cookies: Map<String, String>): TplinkHttpResponse {
         postCallCount++
         lastRequestBody = body
-        val cookieValue = initCookies["Authorization"]
+        val cookieValue = cookies["Authorization"]
         lastCookieHeaderSent = cookieValue
 
         if (expectedAuthorizationCookie != null && cookieValue != expectedAuthorizationCookie) {
@@ -47,7 +47,7 @@ internal class FakeTplinkC20HttpTransport(
     }
 }
 
-/** Response real de IGD_DEV_INFO capturada (usada como fixture de sucesso de login/leitura). */
+/** Response sintética de IGD_DEV_INFO — formato real capturado, dados fictícios (fixture de sucesso de login/leitura). */
 internal fun deviceInfoOnlyResponse(): TplinkHttpResponse = TplinkHttpResponse(
     statusCode = 200,
     body = """
@@ -60,7 +60,7 @@ internal fun deviceInfoOnlyResponse(): TplinkHttpResponse = TplinkHttpResponse(
         var bSecured=0;
         var clientLocal=1;
         var clientIp="192.168.0.100";
-        var clientMac="74:56:3C:39:F3:95";
+        var clientMac="AA:BB:CC:DD:EE:FF";
         ${'$'}.ret=0;
         [error]0
     """.trimIndent(),
@@ -68,7 +68,7 @@ internal fun deviceInfoOnlyResponse(): TplinkHttpResponse = TplinkHttpResponse(
     cookies = emptyMap(),
 )
 
-/** Response real do bundle IGD_DEV_INFO+ETH_SWITCH+SYS_MODE (índices 0,1,2), capturada. */
+/** Response sintética do bundle IGD_DEV_INFO+ETH_SWITCH+SYS_MODE (índices 0,1,2) — formato real capturado, dados fictícios. */
 internal fun deviceInfoBundleResponse(): TplinkHttpResponse = TplinkHttpResponse(
     statusCode = 200,
     body = """
@@ -90,30 +90,30 @@ internal fun deviceInfoBundleResponse(): TplinkHttpResponse = TplinkHttpResponse
     cookies = emptyMap(),
 )
 
-/** Response real de LAN_WLAN com duas linhas (dois rádios), capturada. */
+/** Response sintética de LAN_WLAN com duas linhas (dois rádios) — formato real capturado, dados fictícios. */
 internal fun lanWlanResponse(): TplinkHttpResponse = TplinkHttpResponse(
     statusCode = 200,
     body = """
         [1,1,0,0,0,0]0
         name=wlan0
-        SSID=Luiz-2.4G
+        SSID=Casa-2.4G
         [1,2,0,0,0,0]0
         name=wlan5
-        SSID=Luiz-5G
+        SSID=Casa-5G
         [error]0
     """.trimIndent(),
     headers = emptyMap(),
     cookies = emptyMap(),
 )
 
-/** Response real de LAN_HOST_ENTRY com um cliente conectado, capturada. */
+/** Response sintética de LAN_HOST_ENTRY com um cliente conectado — formato real capturado, dados fictícios. */
 internal fun lanHostEntryResponse(): TplinkHttpResponse = TplinkHttpResponse(
     statusCode = 200,
     body = """
         [1,0,0,0,0,0]0
         leaseTimeRemaining=6231
-        MACAddress=74:56:3C:39:F3:95
-        hostName=Luiz-PC
+        MACAddress=AA:BB:CC:DD:EE:FF
+        hostName=Notebook-Teste
         IPAddress=192.168.0.100
         [error]0
     """.trimIndent(),
