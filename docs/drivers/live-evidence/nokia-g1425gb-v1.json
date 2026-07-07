@@ -1,0 +1,95 @@
+{
+  "profileId": "nokia_g1425gb_v1",
+  "device": {
+    "vendor": "Nokia",
+    "model": "G-1425G-B",
+    "host": "192.168.1.254"
+  },
+  "authFlow": {
+    "entry": "GET /?t=<timestamp>&lang=eng",
+    "extractedFromLoginPage": [
+      "pubkey",
+      "nonce",
+      "csrf token"
+    ],
+    "post": "/login.cgi",
+    "confirmedSessionArtifacts": [
+      "sid cookie",
+      "lsid cookie",
+      "lang cookie",
+      "X-SID header"
+    ],
+    "crypto": {
+      "rsa": "RSA/ECB/PKCS1Padding",
+      "aes": "AES/CBC/NoPadding with ISO7816-4 style padding",
+      "transportEncoding": "base64url-like transformations"
+    }
+  },
+  "confirmedReadableEndpoints": [
+    "/device_status.cgi",
+    "/wan_status.cgi?gpon",
+    "/show_wan_status.cgi?ipv4",
+    "/show_wan_status.cgi?ipv6",
+    "/index.cgi?getppp",
+    "/overview.cgi",
+    "/lan_status.cgi?lan",
+    "/lan_status.cgi?wlan",
+    "/dns.cgi",
+    "/lan_ipv4.cgi",
+    "/wan_config_glb.cgi",
+    "/wlan_config.cgi",
+    "/wlan_config.cgi?v=11ac",
+    "/statistics.cgi",
+    "/voice_info.cgi"
+  ],
+  "mappedCapabilitiesFromLiveAudit": {
+    "deviceInfo": [
+      "model",
+      "vendor",
+      "serial",
+      "software version",
+      "hardware version",
+      "uptime",
+      "memory",
+      "CPU temperature"
+    ],
+    "gpon": [
+      "status",
+      "rx power",
+      "tx power",
+      "transceiver temperature",
+      "supply voltage",
+      "bias current"
+    ],
+    "wan": [
+      "external IPv4",
+      "gateway",
+      "DNS servers",
+      "VLAN",
+      "connection type",
+      "uptime"
+    ],
+    "wifiAndLan": [
+      "2.4 GHz settings pages",
+      "5 GHz settings pages",
+      "LAN IPv4 and DHCP configuration fields",
+      "visible local clients table"
+    ],
+    "dhcpClients": {
+      "sourcePage": "/lan_status.cgi?wlan",
+      "visibleClients": 16,
+      "dhcpClients": 15,
+      "staticClients": 1,
+      "dedicatedExport": "gpon-dhcp-clients.json generated outside this repo during the live audit session"
+    }
+  },
+  "discoveredMutableAreasByScreen": [
+    "/dns.cgi",
+    "/lan_ipv4.cgi",
+    "/wan_config_glb.cgi",
+    "/wlan_config.cgi",
+    "/wlan_config.cgi?v=11ac",
+    "/wlan_config.cgi?ssid=",
+    "/wlan_config.cgi?v=11ac&&ssid="
+  ]
+}

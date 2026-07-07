@@ -3,6 +3,7 @@ package com.nethal.core.driver.family.tplink.stokluci
 import com.nethal.core.protocol.http.HttpTransportResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,6 +30,45 @@ class TpLinkStokLuciAuthenticationClientTest {
 
         assertTrue(client.isAuthenticated)
         assertEquals("mytoken123", session.stok)
+    }
+
+    @Test
+    fun `login generates a 16-decimal-digit AES key and IV used directly as bytes, never random binary hex - EncryptionWrapperMR variant`() {
+        // O fake decifra o envelope sign com a chave RSA privada de teste de assinatura e expoe os
+        // digitos k=/i= extraidos - se o roundtrip completo (que inclui o servidor fake decifrando a
+        // resposta com essa mesma chave/IV) funciona, a chave/IV realmente geradas pelo client sao
+        // strings decimais de 16 digitos usadas como bytes ASCII diretos, nao bytes aleatorios
+        // hex-encodados (formato antigo, incorreto).
+        val transport = FakeTpLinkStokLuciHttpTransport(
+            simulateRealServerStok = "mytoken123",
+        )
+        val client = TpLinkStokLuciAuthenticationClient("192.168.0.1", transport)
+
+        val session = client.login("admin", "secret")
+
+        assertEquals("mytoken123", session.stok)
+        assertNotNull(transport.lastCapturedAesKeyDigits)
+        assertNotNull(transport.lastCapturedAesIvDigits)
+        assertTrue(
+            "chave AES capturada do envelope sign deve ser 16 digitos decimais, nao hex de bytes aleatorios",
+            transport.lastCapturedAesKeyDigits!!.matches(Regex("^[0-9]{16}$")),
+        )
+        assertTrue(
+            "IV AES capturado do envelope sign deve ser 16 digitos decimais, nao hex de bytes aleatorios",
+            transport.lastCapturedAesIvDigits!!.matches(Regex("^[0-9]{16}$")),
+        )
+    }
+
+    @Test
+    fun `login uses md5 of username plus password in h of sign envelope`() {
+        val transport = FakeTpLinkStokLuciHttpTransport(
+            simulateRealServerStok = "mytoken123",
+        )
+        val client = TpLinkStokLuciAuthenticationClient("192.168.0.1", transport)
+
+        client.login("admin", "admin")
+
+        assertEquals("f6fdffe48c908deb0f4c3bd36c032e72", transport.lastCapturedSignHash)
     }
 
     @Test
@@ -122,6 +162,24 @@ class TpLinkStokLuciAuthenticationClientTest {
             client.login("admin", "wrong-password")
         }
         assertEquals(TpLinkStokLuciLoginFailureReason.INVALID_CREDENTIALS, exception.reason)
+    }
+
+    @Test
+    fun `login maps decrypted firmware login failed envelope to INVALID_CREDENTIALS with counters`() {
+        val transport = FakeTpLinkStokLuciHttpTransport(
+            keysResponse = passwordKeySuccessResponse(),
+            authResponse = authSuccessResponse(),
+            simulateRealServerEncryptedLoginPayload = """{"errorcode":"login failed","success":false,"data":{"failureCount":1,"attemptsAllowed":9}}""",
+        )
+        val client = TpLinkStokLuciAuthenticationClient("192.168.0.1", transport)
+
+        val exception = assertThrows(TpLinkStokLuciLoginException::class.java) {
+            client.login("admin", "admin")
+        }
+        assertEquals(TpLinkStokLuciLoginFailureReason.INVALID_CREDENTIALS, exception.reason)
+        assertTrue(exception.message!!.contains("errorcode=login failed"))
+        assertTrue(exception.message!!.contains("failureCount=1"))
+        assertTrue(exception.message!!.contains("attemptsAllowed=9"))
     }
 
     @Test

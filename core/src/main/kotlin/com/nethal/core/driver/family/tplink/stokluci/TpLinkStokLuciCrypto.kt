@@ -51,17 +51,38 @@ import javax.crypto.spec.SecretKeySpec
  * caracteres hex são a senha **já cifrada em RSA** com a chave de `form=keys` (1024-bit) — nunca a
  * chave de `form=auth` (512-bit), que é usada só para o envelope `sign`.
  *
- * **O que continua sem confirmação byte a byte** (melhor entendimento disponível, não confirmado):
- * - Se o hash MD5 do campo `sign` usa só a senha (`md5(password)`) ou alguma outra derivação — a
- *   evidência real confirma que não há campo de usuário em lugar nenhum do login, então a fórmula
- *   `md5(username+password)` da lib de referência não se aplica tal qual; assumimos `md5(password)`
- *   como hipótese mais simples compatível com a ausência de usuário, mas isso não foi confirmado
- *   por captura do texto plano do envelope `sign` (só os corpos JSON de request/response de
- *   `form=keys`/`form=auth` foram capturados nesta rodada, não o texto plano do `sign` antes de
- *   cifrar).
+ * **Geração de chave/IV AES — variante decimal confirmada por captura byte a byte externa
+ * (quarta rodada, 2026-07-07)**: uma ferramenta externa de captura (não Claude Code) interceptou o
+ * texto puro exato do campo `sign` antes de cifrar, durante um login real bem-sucedido contra a
+ * mesma unidade física/firmware. Texto capturado (senha nunca aparece em claro, só via hash MD5):
+ * `k=5945270769887026&i=3257785177414969&h=f6fdffe48c908deb0f4c3bd36c032e72&s=855135262`.
  *
- * O próximo teste real do Luiz (`gradlew :core:tplinkC6StokManualCheck`) valida ou refuta a
- * suposição restante do hash.
+ * Isso confirma que este firmware usa a variante `EncryptionWrapperMR` da lib de referência
+ * `tplinkrouterc6u` — **distinta** da `EncryptionWrapper` genérica que orientou as rodadas
+ * anteriores desta implementação: a chave/IV AES **não são bytes binários aleatórios
+ * hex-encodados**. São strings de exatamente 16 caracteres decimais ASCII (`k=5945270769887026`,
+ * `i=3257785177414969` — 16 caracteres cada, só dígitos `0-9`), usadas **diretamente como os 16
+ * bytes UTF-8/ASCII** da chave AES-128 e do IV — nunca decodificadas de hex, nunca geradas como
+ * `SecureRandom.nextBytes(ByteArray(16))`. Ou seja: o que aparece em `k=`/`i=` no envelope `sign`
+ * já É a chave/IV byte a byte (cada caractere decimal = 1 byte ASCII), não uma representação hex de
+ * outra sequência de bytes.
+ *
+ * Consequência prática: [generateAesKeyOrIvDigits] gera essas strings de 16 dígitos decimais, e
+ * tanto o campo `k=`/`i=` do texto do `sign` quanto a `SecretKeySpec`/`IvParameterSpec` usados para
+ * cifrar de fato o campo `data` devem vir da mesma string — nunca de bytes aleatórios binários
+ * convertidos para hex depois.
+ *
+ * O JS real do firmware calcula `s=` como `seq + encryptedData.length`, onde `encryptedData` é a
+ * string Base64 devolvida por `CryptoJS.AES.encrypt(...).toString()` antes de qualquer
+ * URL-encoding. Ou seja: o que entra na conta é o **comprimento da string Base64** do campo
+ * `data`, não o tamanho do ciphertext bruto em bytes.
+ *
+ * **Hash MD5 do campo `sign` — confirmado por correlação exata com o login real do Luiz**:
+ * `h=f6fdffe48c908deb0f4c3bd36c032e72` do exemplo capturado bate exatamente com
+ * `md5("adminadmin")`, isto é, `md5(username + password)` quando usuário e senha são ambos
+ * `admin` — exatamente a convenção já documentada pela lib de referência `tplinkrouterc6u`.
+ * Isso fecha a última lacuna que ainda restava no envelope `sign`: apesar de o firmware não exibir
+ * um campo de usuário no formulário HTML, o hash do `sign` continua incluindo `username`.
  */
 internal object TpLinkStokLuciCrypto {
 
@@ -81,6 +102,15 @@ internal object TpLinkStokLuciCrypto {
      */
     const val AES_KEY_SIZE_BYTES = 16
     const val AES_IV_SIZE_BYTES = 16
+
+    /**
+     * Quantidade de caracteres decimais da string usada como chave/IV AES — ver
+     * [generateAesKeyOrIvDigits]. Coincide numericamente com [AES_KEY_SIZE_BYTES]/
+     * [AES_IV_SIZE_BYTES] porque cada caractere decimal vira exatamente 1 byte ASCII quando usado
+     * como chave/IV — não é coincidência, é a variante `EncryptionWrapperMR` confirmada por captura
+     * byte a byte (ver KDoc do objeto).
+     */
+    const val AES_KEY_OR_IV_DIGIT_COUNT = 16
 
     fun buildRsaPublicKey(modulusHex: String, exponentHex: String): java.security.PublicKey {
         val modulus = BigInteger(modulusHex, 16)
@@ -118,11 +148,32 @@ internal object TpLinkStokLuciCrypto {
         return hex.toString()
     }
 
-    /** Gera [size] bytes aleatórios seguros — usado para chave/IV AES por sessão de login. */
+    /** Gera [size] bytes aleatórios seguros — uso genérico, não usado para chave/IV AES desta plataforma (ver [generateAesKeyOrIvDigits]). */
     fun generateRandomBytes(size: Int, random: SecureRandom = SecureRandom()): ByteArray =
         ByteArray(size).also { random.nextBytes(it) }
 
-    /** Converte bytes para uma string hex minúscula de exatamente `bytes.size * 2` caracteres — formato usado nos campos `k=`/`i=` do envelope `sign`. */
+    /**
+     * Gera uma string de [AES_KEY_OR_IV_DIGIT_COUNT] dígitos decimais ASCII (`0`-`9`) — usada
+     * **diretamente** (bytes UTF-8/ASCII da própria string, sem hex-decodificar) como chave ou IV
+     * AES-128 por sessão de login. Variante `EncryptionWrapperMR`, confirmada por captura byte a
+     * byte externa contra o hardware real (ver KDoc do objeto): a chave/IV real observada não são
+     * bytes binários aleatórios convertidos para hex — são strings decimais usadas literalmente
+     * como bytes.
+     *
+     * Cada chamada gera dígitos independentes (chamar duas vezes para obter chave e IV distintos).
+     */
+    fun generateAesKeyOrIvDigits(random: SecureRandom = SecureRandom()): String =
+        buildString(AES_KEY_OR_IV_DIGIT_COUNT) {
+            repeat(AES_KEY_OR_IV_DIGIT_COUNT) { append(random.nextInt(10)) }
+        }
+
+    /**
+     * Converte bytes para uma string hex minúscula de exatamente `bytes.size * 2` caracteres —
+     * utilitário genérico usado, por exemplo, pelo fake de teste ([FakeTpLinkStokLuciHttpTransport])
+     * para reconstruir a chave/IV a partir dos bytes decimais decifrados do `sign`. **Não** é mais o
+     * formato usado nos campos `k=`/`i=` do envelope `sign` em si — esses campos usam a string
+     * decimal de [generateAesKeyOrIvDigits] diretamente (ver KDoc do objeto).
+     */
     fun bytesToHex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it) }
 
     fun hexToBytes(hex: String): ByteArray = ByteArray(hex.length / 2) { i ->
@@ -162,14 +213,22 @@ internal object TpLinkStokLuciCrypto {
         "operation=login&password=$rsaEncryptedPasswordHex"
 
     /**
-     * Texto plano do envelope `sign`: `k=<chave AES hex>&i=<IV AES hex>&h=<hash>&s=<seq>`. O hash
-     * usado é `md5(password)` — hipótese mais simples compatível com a ausência de campo de usuário
-     * neste firmware (não confirmado por captura do texto plano real do envelope, já que só o
-     * ciphertext foi observado ao vivo).
+     * Texto plano do envelope `sign`:
+     * `k=<chave AES decimal>&i=<IV AES decimal>&h=<hash>&s=<seq + comprimento_base64_do_data>`.
+     * O hash real confirmado contra o login bem-sucedido do Luiz é `md5(username + password)` —
+     * ex.: `admin/admin` gera exatamente `f6fdffe48c908deb0f4c3bd36c032e72`, o mesmo `h=` da
+     * captura byte a byte do equipamento.
      */
-    fun buildSignPlaintext(aesKeyHex: String, aesIvHex: String, password: String, seq: Long): String {
-        val hash = md5Hex(password)
-        return "k=$aesKeyHex&i=$aesIvHex&h=$hash&s=$seq"
+    fun buildSignPlaintext(
+        aesKeyDigits: String,
+        aesIvDigits: String,
+        username: String,
+        password: String,
+        seq: Long,
+        encryptedDataBase64Length: Int,
+    ): String {
+        val hash = md5Hex(username + password)
+        return "k=$aesKeyDigits&i=$aesIvDigits&h=$hash&s=${seq + encryptedDataBase64Length}"
     }
 
     /**

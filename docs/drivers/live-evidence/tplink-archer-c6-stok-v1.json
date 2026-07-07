@@ -1,0 +1,59 @@
+{
+  "profileId": "tplink_archer_c6_stok_v1",
+  "device": {
+    "vendor": "TP-Link",
+    "model": "Archer C6",
+    "hardwareVersion": "v2.0",
+    "firmware": "1.1.10 Build 20230830 rel.69433(5553)",
+    "host": "192.168.0.1"
+  },
+  "authFlow": {
+    "loginPage": "/webpages/login.html?t=1693386897767",
+    "headersConfirmedByBrowser": {
+      "referer": "/webpages/login.html?t=1693386897767",
+      "xRequestedWith": "XMLHttpRequest",
+      "accept": "application/json, text/javascript, */*; q=0.01",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    "steps": [
+      {
+        "request": "POST /cgi-bin/luci/;stok=/login?form=keys",
+        "body": "operation=read",
+        "response": "JSON success=true, data.password=[rsa1024_modulus_hex,010001]"
+      },
+      {
+        "request": "POST /cgi-bin/luci/;stok=/login?form=auth",
+        "body": "operation=read",
+        "response": "JSON success=true, data.key=[rsa512_modulus_hex,010001], data.seq=<long>"
+      },
+      {
+        "request": "POST /cgi-bin/luci/;stok=/login?form=login",
+        "bodyShape": "sign=<rsa512_chunked_hex>&data=<urlencoded_base64_aes_cbc>",
+        "confirmedRules": [
+          "AES key and IV are 16 decimal ASCII digits used directly as bytes",
+          "AES mode is CBC with PKCS7 padding",
+          "login plaintext is operation=login&password=<rsa1024_hex>",
+          "h=md5(username+password)",
+          "s=seq+encryptedData.length where encryptedData is the Base64 string before URL encoding",
+          "RSA chunk size for sign is 53 bytes"
+        ]
+      }
+    ],
+    "capturedExample": {
+      "signPlaintext": "k=5945270769887026&i=3257785177414969&h=f6fdffe48c908deb0f4c3bd36c032e72&s=855135262",
+      "hLength": 32,
+      "hAlgorithmInference": "MD5 hex",
+      "browserCapturedFailedLoginResponsePlaintext": "{\"errorcode\":\"login failed\",\"success\":false,\"data\":{\"failureCount\":1,\"attemptsAllowed\":9}}"
+    }
+  },
+  "currentDriverStatus": {
+    "previousFailure": "HTTP 403 INVALID_CREDENTIALS caused by h being calculated as md5(password) and s not matching firmware formula",
+    "currentObservedBehavior": "Driver now reaches HTTP 200 on form=login against real hardware, but still fails to extract stok from the encrypted response in the tested admin/admin run",
+    "likelyInterpretation": "Remaining mismatch is narrowed to post-login response handling or the tested credential, not the outer HTTP handshake"
+  },
+  "confirmedReadEndpointsWithoutFullCapabilityMapping": [
+    "/cgi-bin/luci/;stok=/login?form=keys",
+    "/cgi-bin/luci/;stok=/login?form=auth",
+    "/cgi-bin/luci/;stok=/login?form=login"
+  ]
+}

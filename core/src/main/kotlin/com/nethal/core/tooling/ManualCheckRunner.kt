@@ -326,7 +326,7 @@ private fun runTplinkC6Stok(ip: String, username: String) {
     }
 
     println("Conectando em $ip como \"$username\" (profile=${profile.profileId}, driverFamilyId=${profile.driverFamilyId})...")
-    println("AVISO: protocolo corrigido a partir de evidência ao vivo (login real interceptado + leitura de JS do equipamento) após a implementação anterior falhar com INVALID_CREDENTIALS contra o hardware real. Ainda restam suposições não confirmadas byte a byte (ver KDoc de TpLinkStokLuciCrypto). Reporte o resultado (sucesso ou falha) para atualizar o catálogo.")
+    println("AVISO: protocolo corrigido a partir de evidência ao vivo (login real interceptado + leitura de JS do equipamento). A causa real do INVALID_CREDENTIALS/403 anterior foi identificada: o campo h= do envelope sign usa md5(username+password), nao md5(password). Reporte o resultado (sucesso ou falha) para atualizar o catálogo.")
 
     val driverFamilyRegistry = defaultDriverFamilyRegistry()
     val httpTransport = DefaultHttpTransport(
@@ -334,12 +334,15 @@ private fun runTplinkC6Stok(ip: String, username: String) {
             connectTimeoutMillis = 10_000,
             getReadTimeoutMillis = 20_000,
             postReadTimeoutMillis = 20_000,
-            getAcceptHeader = "application/json, text/html,*/*;q=0.9",
-            postAcceptHeader = "application/json, text/plain, */*",
-            postContentType = "application/x-www-form-urlencoded",
+            getAcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            postAcceptHeader = "application/json, text/javascript, */*; q=0.01",
+            postContentType = "application/x-www-form-urlencoded; charset=UTF-8",
+            extraPostHeaders = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+            ),
             postRefererProvider = { url ->
                 val base = URL(url)
-                "${base.protocol}://${base.host}${if (base.port !in listOf(-1, 80, 443)) ":${base.port}" else ""}/webpages/index.html"
+                "${base.protocol}://${base.host}${if (base.port !in listOf(-1, 80, 443)) ":${base.port}" else ""}/webpages/login.html?t=1693386897767"
             },
             followRedirectsManually = false,
         ),

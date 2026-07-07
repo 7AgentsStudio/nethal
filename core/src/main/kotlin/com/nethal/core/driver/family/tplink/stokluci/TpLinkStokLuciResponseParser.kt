@@ -62,6 +62,20 @@ internal object TpLinkStokLuciResponseParser {
     @Serializable
     private data class DecryptedLoginPayload(val stok: String? = null)
 
+    @Serializable
+    internal data class DecryptedLoginErrorData(
+        val failureCount: Int? = null,
+        val attemptsAllowed: Int? = null,
+    )
+
+    @Serializable
+    internal data class DecryptedLoginEnvelope(
+        val stok: String? = null,
+        val success: Boolean? = null,
+        @SerialName("errorcode") val errorCode: String? = null,
+        val data: DecryptedLoginErrorData? = null,
+    )
+
     /**
      * Extrai a chave RSA de cifra de senha (1024-bit) da resposta real de `form=keys`
      * (`data.password = [modulus_hex, exponent_hex]`). Retorna `null` se a resposta não tiver o
@@ -102,6 +116,10 @@ internal object TpLinkStokLuciResponseParser {
         val parsed = runCatching { json.decodeFromString(DecryptedLoginPayload.serializer(), decryptedJson) }.getOrNull()
         return parsed?.stok?.takeIf { it.isNotBlank() }
     }
+
+    /** Lê o envelope JSON já decifrado de `form=login`, quando ele representa erro ou sucesso sem `stok`. */
+    fun parseDecryptedLoginEnvelope(decryptedJson: String): DecryptedLoginEnvelope? =
+        runCatching { json.decodeFromString(DecryptedLoginEnvelope.serializer(), decryptedJson) }.getOrNull()
 }
 
 /** Vocabulário `err_code` observado em respostas de erro deste protocolo, quando presente no corpo (campo top-level `error_code`). */

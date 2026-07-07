@@ -52,7 +52,7 @@ tasks.register<JavaExec>("tplinkC20ManualCheck") {
 
 tasks.register<JavaExec>("tplinkC6StokManualCheck") {
     group = "verification"
-    description = "Diagnostico manual contra um TP-Link Archer C6 real na LAN, plataforma stok/luci (profile tplink_archer_c6_stok_v1, DISCOVERY_ONLY, protocolo NUNCA testado contra hardware real ainda). Uso: gradlew :core:tplinkC6StokManualCheck --args=\"<ip> <usuario>\""
+    description = "Diagnostico manual contra um TP-Link Archer C6 real na LAN, plataforma stok/luci (profile tplink_archer_c6_stok_v1, DISCOVERY_ONLY, handshake real ja confirmado; login ainda em refinamento). Uso: gradlew :core:tplinkC6StokManualCheck --args=\"<ip> <usuario>\""
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.nethal.core.tooling.ManualCheckRunnerKt")
     argumentProviders.add(CommandLineArgumentProvider { listOf("tplink_archer_c6_stok_v1") })

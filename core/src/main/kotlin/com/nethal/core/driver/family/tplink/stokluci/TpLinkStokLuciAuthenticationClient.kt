@@ -40,6 +40,15 @@ internal class TpLinkStokLuciLoginException(
  * **existem sim duas chamadas de preparação com duas chaves RSA distintas**, exatamente como a lib
  * de referência `tplinkrouterc6u` sempre documentou.
  *
+ * **Correção adicional sobre a geração de chave/IV AES (quarta rodada, 2026-07-07)**: mesmo com as
+ * duas chaves RSA corrigidas, o login real ainda falhava com `INVALID_CREDENTIALS`/HTTP 403. Uma
+ * ferramenta externa de captura (não Claude Code) interceptou o texto puro exato do campo `sign`
+ * antes de cifrar, durante um login real bem-sucedido contra a mesma unidade/firmware, revelando
+ * que a chave/IV AES **não são bytes binários aleatórios hex-encodados** (como as três rodadas
+ * anteriores assumiam) — são strings de 16 dígitos decimais ASCII usadas diretamente como os 16
+ * bytes da chave/IV (variante `EncryptionWrapperMR` da lib de referência `tplinkrouterc6u`). Ver
+ * KDoc de [TpLinkStokLuciCrypto] para o valor exato capturado e o detalhe completo.
+ *
  * Passos do login real confirmado:
  *
  * 1. `POST {host}/cgi-bin/luci/;stok=/login?form=keys`, corpo `operation=read`. Resposta real:
@@ -50,16 +59,24 @@ internal class TpLinkStokLuciLoginException(
  *    `{"success":true,"data":{"key":["<128 caracteres hex>","010001"],"seq":<número>}}` —
  *    `data.key` é uma chave RSA **diferente** da do passo 1 (módulo 128 caracteres hex = 64 bytes =
  *    RSA 512-bit), usada **só para assinar o envelope `sign`**. `data.seq` é o número de sequência.
- * 3. Gera aleatoriamente por sessão de login: chave AES-128 e IV AES-128 ([TpLinkStokLuciCrypto]).
+ * 3. Gera por sessão de login duas strings de 16 dígitos decimais ASCII
+ *    ([TpLinkStokLuciCrypto.generateAesKeyOrIvDigits]) — uma para a chave AES-128, outra para o IV.
+ *    **Correção confirmada por captura byte a byte externa (quarta rodada, 2026-07-07)**: essas
+ *    strings decimais são usadas **diretamente como os 16 bytes UTF-8/ASCII** da chave/IV — nunca
+ *    bytes binários aleatórios convertidos para hex depois (variante `EncryptionWrapperMR` da lib de
+ *    referência `tplinkrouterc6u`, distinta da `EncryptionWrapper` genérica assumida nas rodadas
+ *    anteriores). Ver KDoc de [TpLinkStokLuciCrypto] para o texto exato capturado que confirmou isso.
  * 4. Cifra a senha em RSA (chave do passo 1, PKCS1v1.5) e converte o resultado para hex.
  *    `data` = [TpLinkStokLuciCrypto.buildLoginPlaintext] (`operation=login&password=<senha cifrada
  *    em RSA, em hex>`, sem `&confirm=true` — confirmado byte a byte por captura real do texto plano
  *    via hook em `CryptoJS.AES.encrypt`; ver KDoc de [TpLinkStokLuciCrypto]), cifrado com
- *    AES-CBC/PKCS7 usando a chave/IV gerados no passo 3, resultado em base64.
- * 5. `sign` = [TpLinkStokLuciCrypto.buildSignPlaintext] (`k=<chave AES hex>&i=<IV AES hex>&h=<hash>
- *    &s=<seq>`, hash = `md5(password)` — hipótese não confirmada byte a byte, ver KDoc do crypto),
- *    cifrado em pedaços com a chave RSA do passo 2 (512-bit, PKCS1v1.5, chunk de 53 bytes = 64 - 11
- *    bytes de overhead), resultado em hex.
+ *    AES-CBC/PKCS7 usando a chave/IV (bytes ASCII das strings decimais) gerados no passo 3,
+ *    resultado em base64.
+ * 5. `sign` = [TpLinkStokLuciCrypto.buildSignPlaintext] (`k=<string decimal da chave AES>&i=<string
+ *    decimal do IV AES>&h=<hash>&s=<seq + comprimento_base64_do_data>`, hash =
+ *    `md5(username+password)` — ambos confirmados pelo JS real do firmware e pela captura real do
+ *    login do Luiz), cifrado em pedaços com a chave RSA do passo 2 (512-bit, PKCS1v1.5, chunk de
+ *    53 bytes = 64 - 11 bytes de overhead), resultado em hex.
  * 6. `POST {host}/cgi-bin/luci/;stok=/login?form=login`, corpo `sign=<hex>&data=<base64
  *    URL-encoded>` — confirmado batendo com um HAR real de outra sessão de login também
  *    bem-sucedida (mesmo par de campos `sign`/`data`, nunca `operation=login&password=...`).
@@ -78,9 +95,9 @@ internal class TpLinkStokLuciLoginException(
  * de [login], nunca vira campo desta classe nem é logada. Só o [TpLinkStokLuciSession] resultante
  * (token `stok` + cookie `sysauth` opcional, nenhum segredo por si só) fica em memória.
  *
- * **Suposições que ainda restam sem confirmação byte a byte** (ver KDoc de [TpLinkStokLuciCrypto]
- * para o detalhe completo): se o hash do `sign` usa só a senha ou alguma outra derivação. O próximo
- * teste real do Luiz (`gradlew :core:tplinkC6StokManualCheck`) valida ou refuta.
+ * Com o `h=` confirmado como `md5(username+password)`, o envelope de login desta plataforma fica
+ * completamente alinhado com a captura real e com a variante `EncryptionWrapperMR` da lib de
+ * referência.
  */
 internal class TpLinkStokLuciAuthenticationClient(
     private val host: String,
@@ -133,10 +150,14 @@ internal class TpLinkStokLuciAuthenticationClient(
             )
         authKeys = parsedAuthKeys
 
-        val aesKey = TpLinkStokLuciCrypto.generateRandomBytes(TpLinkStokLuciCrypto.AES_KEY_SIZE_BYTES)
-        val aesIv = TpLinkStokLuciCrypto.generateRandomBytes(TpLinkStokLuciCrypto.AES_IV_SIZE_BYTES)
-        val aesKeyHex = TpLinkStokLuciCrypto.bytesToHex(aesKey)
-        val aesIvHex = TpLinkStokLuciCrypto.bytesToHex(aesIv)
+        // Chave/IV AES-128 desta sessão de login: strings de 16 dígitos decimais ASCII, usadas
+        // diretamente (bytes UTF-8) como SecretKeySpec/IvParameterSpec E como os campos k=/i= do
+        // texto do sign — nunca bytes binários aleatórios hex-encodados (variante `EncryptionWrapperMR`,
+        // confirmada por captura byte a byte externa contra o hardware real; ver KDoc de [TpLinkStokLuciCrypto]).
+        val aesKeyDigits = TpLinkStokLuciCrypto.generateAesKeyOrIvDigits()
+        val aesIvDigits = TpLinkStokLuciCrypto.generateAesKeyOrIvDigits()
+        val aesKey = aesKeyDigits.toByteArray(Charsets.US_ASCII)
+        val aesIv = aesIvDigits.toByteArray(Charsets.US_ASCII)
 
         val rsaEncryptedPasswordHex = TpLinkStokLuciCrypto.rsaEncryptChunkedToHex(
             modulusHex = parsedPasswordKey.key.modulusHex,
@@ -148,7 +169,14 @@ internal class TpLinkStokLuciAuthenticationClient(
         val encryptedData = TpLinkStokLuciCrypto.aesCbcEncrypt(aesKey, aesIv, loginPlaintext.toByteArray(Charsets.UTF_8))
         val dataBase64 = TpLinkStokLuciCrypto.base64Encode(encryptedData)
 
-        val signPlaintext = TpLinkStokLuciCrypto.buildSignPlaintext(aesKeyHex, aesIvHex, password, parsedAuthKeys.seq)
+        val signPlaintext = TpLinkStokLuciCrypto.buildSignPlaintext(
+            aesKeyDigits = aesKeyDigits,
+            aesIvDigits = aesIvDigits,
+            username = username,
+            password = password,
+            seq = parsedAuthKeys.seq,
+            encryptedDataBase64Length = dataBase64.length,
+        )
         val signHex = TpLinkStokLuciCrypto.rsaEncryptChunkedToHex(
             modulusHex = parsedAuthKeys.key.modulusHex,
             exponentHex = parsedAuthKeys.key.exponentHex,
@@ -179,15 +207,34 @@ internal class TpLinkStokLuciAuthenticationClient(
                 "login falhou: resposta sem campo data (credencial provavelmente invalida)",
             )
 
-        val stok = runCatching {
+        val decryptedLoginJson = runCatching {
             val decryptedBytes = TpLinkStokLuciCrypto.aesCbcDecrypt(aesKey, aesIv, TpLinkStokLuciCrypto.base64Decode(ciphertextBase64))
-            TpLinkStokLuciResponseParser.parseDecryptedStok(String(decryptedBytes, Charsets.UTF_8))
+            String(decryptedBytes, Charsets.UTF_8)
         }.getOrNull()
+        val stok = decryptedLoginJson?.let(TpLinkStokLuciResponseParser::parseDecryptedStok)
 
         val sysauthCookie = TpLinkStokLuciCrypto.extractSysauthCookie(loginResponse.headers["set-cookie"])
             ?: loginResponse.cookies["sysauth"]
 
         if (stok.isNullOrBlank()) {
+            val decryptedEnvelope = decryptedLoginJson?.let(TpLinkStokLuciResponseParser::parseDecryptedLoginEnvelope)
+            if (decryptedEnvelope?.success == false && decryptedEnvelope.errorCode == "login failed") {
+                val failureCount = decryptedEnvelope.data?.failureCount
+                val attemptsAllowed = decryptedEnvelope.data?.attemptsAllowed
+                val suffix = buildString {
+                    if (failureCount != null || attemptsAllowed != null) {
+                        append(" (failureCount=")
+                        append(failureCount?.toString() ?: "?")
+                        append(", attemptsAllowed=")
+                        append(attemptsAllowed?.toString() ?: "?")
+                        append(')')
+                    }
+                }
+                throw TpLinkStokLuciLoginException(
+                    TpLinkStokLuciLoginFailureReason.INVALID_CREDENTIALS,
+                    "login falhou: firmware devolveu errorcode=login failed$suffix",
+                )
+            }
             throw TpLinkStokLuciLoginException(
                 TpLinkStokLuciLoginFailureReason.INVALID_CREDENTIALS,
                 "login falhou: nao foi possivel decifrar stok da resposta (credencial provavelmente invalida)",

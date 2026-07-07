@@ -51,6 +51,32 @@ class TpLinkStokLuciCryptoTest {
     }
 
     @Test
+    fun `generateAesKeyOrIvDigits produces exactly 16 decimal ASCII digits, never hex or binary bytes`() {
+        val digits = TpLinkStokLuciCrypto.generateAesKeyOrIvDigits()
+
+        assertEquals(16, digits.length)
+        assertTrue("deve conter so digitos decimais 0-9, formato real confirmado por captura byte a byte", digits.matches(Regex("^[0-9]{16}$")))
+    }
+
+    @Test
+    fun `generateAesKeyOrIvDigits string used directly as UTF-8 bytes round-trips through AES-CBC`() {
+        // Confirma o uso real: a string decimal de 16 caracteres vira, sem hex-decodificar, os 16
+        // bytes ASCII usados como SecretKeySpec/IvParameterSpec (variante EncryptionWrapperMR).
+        val keyDigits = TpLinkStokLuciCrypto.generateAesKeyOrIvDigits()
+        val ivDigits = TpLinkStokLuciCrypto.generateAesKeyOrIvDigits()
+        val key = keyDigits.toByteArray(Charsets.US_ASCII)
+        val iv = ivDigits.toByteArray(Charsets.US_ASCII)
+        assertEquals(TpLinkStokLuciCrypto.AES_KEY_SIZE_BYTES, key.size)
+        assertEquals(TpLinkStokLuciCrypto.AES_IV_SIZE_BYTES, iv.size)
+
+        val plaintext = "operation=login&password=deadbeef"
+        val ciphertext = TpLinkStokLuciCrypto.aesCbcEncrypt(key, iv, plaintext.toByteArray(Charsets.UTF_8))
+        val decrypted = TpLinkStokLuciCrypto.aesCbcDecrypt(key, iv, ciphertext)
+
+        assertEquals(plaintext, String(decrypted, Charsets.UTF_8))
+    }
+
+    @Test
     fun `buildLoginPlaintext embeds the rsa-encrypted password hex, never confirm=true, never a username field`() {
         val rsaEncryptedPasswordHex = "ab".repeat(128)
         val plaintext = TpLinkStokLuciCrypto.buildLoginPlaintext(rsaEncryptedPasswordHex)
@@ -63,12 +89,31 @@ class TpLinkStokLuciCryptoTest {
     }
 
     @Test
-    fun `buildSignPlaintext embeds aes key, iv, md5 hash of password and seq`() {
-        val plaintext = TpLinkStokLuciCrypto.buildSignPlaintext("aeskeyhex", "aesivhex", "minhasenha", 42L)
+    fun `buildSignPlaintext embeds aes key digits, iv digits, md5 hash of username+password and seq plus base64 length`() {
+        // k=/i= recebem strings decimais de 16 digitos (formato real confirmado por captura byte a
+        // byte externa), nunca hex de bytes aleatorios - buildSignPlaintext so concatena, quem gera
+        // o formato certo e generateAesKeyOrIvDigits (ver TpLinkStokLuciAuthenticationClient).
+        val plaintext = TpLinkStokLuciCrypto.buildSignPlaintext("5945270769887026", "3257785177414969", "admin", "minhasenha", 42L, 44)
 
-        assertTrue(plaintext.startsWith("k=aeskeyhex&i=aesivhex&h="))
-        assertTrue(plaintext.endsWith("&s=42"))
-        assertTrue(plaintext.contains(TpLinkStokLuciCrypto.md5Hex("minhasenha")))
+        assertTrue(plaintext.startsWith("k=5945270769887026&i=3257785177414969&h="))
+        assertTrue(plaintext.endsWith("&s=86"))
+        assertTrue(plaintext.contains(TpLinkStokLuciCrypto.md5Hex("adminminhasenha")))
+    }
+
+    @Test
+    fun `buildSignPlaintext matches the real captured hash for admin plus admin and applies seq plus base64 length`() {
+        // Reproduz a FORMA exata do texto puro capturado por ferramenta externa (nao Claude Code)
+        // via interceptacao de um login real bem-sucedido contra o hardware fisico do Luiz (Archer
+        // C6 v2.0, firmware 1.1.10 Build 20230830 rel.69433(5553)):
+        // "k=5945270769887026&i=3257785177414969&h=f6fdffe48c908deb0f4c3bd36c032e72&s=855135262"
+        // k=/i= sao strings decimais de 16 digitos (nunca hex de bytes aleatorios), h=32 caracteres
+        // hex (MD5) e, no login real do Luiz, bate exatamente com md5("adminadmin"), provando que
+        // a formula correta e md5(username+password), nao md5(password). O s= do firmware soma o
+        // seq ao comprimento da string Base64 do campo data antes do URL-encoding.
+        val plaintext = TpLinkStokLuciCrypto.buildSignPlaintext("5945270769887026", "3257785177414969", "admin", "admin", 855134878L, 384)
+
+        assertEquals("k=5945270769887026&i=3257785177414969&h=f6fdffe48c908deb0f4c3bd36c032e72&s=855135262", plaintext)
+        assertTrue(Regex("""^k=\d{16}&i=\d{16}&h=[0-9a-f]{32}&s=\d+$""").matches(plaintext))
     }
 
     @Test

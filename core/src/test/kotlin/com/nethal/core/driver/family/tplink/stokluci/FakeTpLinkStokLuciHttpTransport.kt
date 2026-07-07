@@ -23,6 +23,10 @@ import javax.crypto.Cipher
  * completo (client cifra com chave efêmera -> "servidor" decifra o envelope -> "servidor" cifra a
  * resposta com a mesma chave -> client decifra a resposta), sem hardcodar uma chave AES fixa que o
  * client nunca usaria de fato.
+ *
+ * A chave/IV extraídos de `k=`/`i=` são strings decimais de 16 dígitos usadas diretamente como
+ * bytes ASCII (variante `EncryptionWrapperMR`, confirmada por captura byte a byte externa contra o
+ * hardware real, ver KDoc de [TpLinkStokLuciCrypto]) — nunca hex de bytes binários aleatórios.
  */
 internal class FakeTpLinkStokLuciHttpTransport(
     private val keysResponse: HttpTransportResponse? = null,
@@ -30,12 +34,21 @@ internal class FakeTpLinkStokLuciHttpTransport(
     private val loginResponse: HttpTransportResponse? = null,
     private val statusResponse: HttpTransportResponse? = null,
     private val simulateRealServerStok: String? = null,
+    private val simulateRealServerEncryptedLoginPayload: String? = null,
 ) : HttpTransport {
 
     var postCallCount = 0
         private set
     val postedUrls = mutableListOf<String>()
     var lastLoginBody: String? = null
+        private set
+
+    /** Strings decimais de 16 digitos (chave/IV AES) extraidas do envelope `sign` decifrado no ultimo login simulado - ver [simulateLoginResponse]. */
+    var lastCapturedAesKeyDigits: String? = null
+        private set
+    var lastCapturedAesIvDigits: String? = null
+        private set
+    var lastCapturedSignHash: String? = null
         private set
 
     override fun get(url: String, extraHeaders: Map<String, String>): HttpTransportResponse =
@@ -52,6 +65,7 @@ internal class FakeTpLinkStokLuciHttpTransport(
             url.contains("form=login") -> {
                 lastLoginBody = body
                 when {
+                    simulateRealServerEncryptedLoginPayload != null -> simulateEncryptedLoginResponse(body, simulateRealServerEncryptedLoginPayload)
                     simulateRealServerStok != null -> simulateLoginResponse(body, simulateRealServerStok)
                     else -> loginResponse ?: HttpTransportResponse(404, "", emptyMap(), emptyMap())
                 }
@@ -66,20 +80,32 @@ internal class FakeTpLinkStokLuciHttpTransport(
      * cifra `{"stok":"<stok>"}` com essa mesma chave/IV — simula fielmente o que o firmware real
      * faz (extrai a chave de sessão do envelope assinado, responde cifrado com ela), sem exigir que
      * o client exponha a chave AES gerada internamente.
+     *
+     * `k=`/`i=` são as strings decimais de 16 dígitos usadas **diretamente como bytes ASCII** da
+     * chave/IV (variante `EncryptionWrapperMR`, confirmada por captura byte a byte externa contra o
+     * hardware real — ver KDoc de [TpLinkStokLuciCrypto]), nunca hex de bytes binários aleatórios.
      */
-    private fun simulateLoginResponse(requestBody: String, stok: String): HttpTransportResponse {
+    private fun simulateLoginResponse(requestBody: String, stok: String): HttpTransportResponse =
+        simulateEncryptedLoginResponse(requestBody, """{"stok":"$stok"}""")
+
+    private fun simulateEncryptedLoginResponse(requestBody: String, encryptedPayloadJson: String): HttpTransportResponse {
         val signHex = Regex("""sign=([0-9a-f]+)""").find(requestBody)?.groupValues?.get(1)
             ?: return HttpTransportResponse(400, "", emptyMap(), emptyMap())
 
         val signPlaintext = decryptRsaChunked(signHex, TestSignKeyFixture.MODULUS_HEX, TestSignKeyFixture.PRIVATE_EXPONENT_HEX)
-        val aesKeyHex = Regex("""k=([0-9a-f]+)""").find(signPlaintext)?.groupValues?.get(1)
+        val aesKeyDigits = Regex("""k=(\d+)""").find(signPlaintext)?.groupValues?.get(1)
             ?: return HttpTransportResponse(400, "", emptyMap(), emptyMap())
-        val aesIvHex = Regex("""i=([0-9a-f]+)""").find(signPlaintext)?.groupValues?.get(1)
+        val aesIvDigits = Regex("""i=(\d+)""").find(signPlaintext)?.groupValues?.get(1)
             ?: return HttpTransportResponse(400, "", emptyMap(), emptyMap())
+        val signHash = Regex("""h=([0-9a-f]+)""").find(signPlaintext)?.groupValues?.get(1)
+            ?: return HttpTransportResponse(400, "", emptyMap(), emptyMap())
+        lastCapturedAesKeyDigits = aesKeyDigits
+        lastCapturedAesIvDigits = aesIvDigits
+        lastCapturedSignHash = signHash
 
-        val aesKey = TpLinkStokLuciCrypto.hexToBytes(aesKeyHex)
-        val aesIv = TpLinkStokLuciCrypto.hexToBytes(aesIvHex)
-        val ciphertextBase64 = encryptLoginResponsePayload(aesKey, aesIv, """{"stok":"$stok"}""")
+        val aesKey = aesKeyDigits.toByteArray(Charsets.US_ASCII)
+        val aesIv = aesIvDigits.toByteArray(Charsets.US_ASCII)
+        val ciphertextBase64 = encryptLoginResponsePayload(aesKey, aesIv, encryptedPayloadJson)
 
         return HttpTransportResponse(200, """{"data":"$ciphertextBase64"}""", emptyMap(), emptyMap())
     }
