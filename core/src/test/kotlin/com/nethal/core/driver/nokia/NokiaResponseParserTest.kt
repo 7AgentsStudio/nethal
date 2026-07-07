@@ -132,6 +132,25 @@ class NokiaResponseParserTest {
         assertNull(NokiaResponseParser.parseDeviceInfo("""{"SoftwareVersion":"x"}"""))
     }
 
+    @Test
+    fun `parses connected clients from home networking table`() {
+        val clients = NokiaResponseParser.parseConnectedClients(sampleHomeNetworkingHtml())
+
+        assertEquals(2, clients.size)
+        assertEquals("Active", clients[0].status)
+        assertEquals("Ethernet", clients[0].connectionType)
+        assertEquals("Notebook da TIM", clients[0].deviceName)
+        assertEquals("192.168.1.71", clients[0].ipAddress)
+        assertEquals("08:B4:D2:**:**:**", clients[0].macAddressMasked.uppercase())
+        assertEquals("DHCP", clients[0].allocation)
+        assertEquals("15 hours 8 min 38 sec", clients[0].leaseRemaining)
+    }
+
+    @Test
+    fun `connected clients returns empty list when table is absent`() {
+        assertTrue(NokiaResponseParser.parseConnectedClients("<html>sem clientes</html>").isEmpty())
+    }
+
     // --- Conversões de unidade isoladas ---
 
     @Test

@@ -64,11 +64,24 @@ data class NokiaLoginPageEvidence(
     val serverHeader: String?,
 )
 
+/** Um cliente visível na tabela de rede local da UI (`/lan_status.cgi?wlan`). */
+data class NokiaConnectedClient(
+    val status: String,
+    val connectionType: String,
+    val deviceName: String,
+    val ipAddress: String,
+    val macAddressMasked: String,
+    val allocation: String,
+    val leaseRemaining: String,
+    val lastActiveTime: String,
+)
+
 /** Snapshot agregado dos 4 endpoints de leitura, retornado pelo orquestrador do driver. */
 data class NokiaDriverSnapshot(
     val gpon: NokiaGponStatus?,
     val wan: NokiaWanStatus?,
     val ppp: NokiaPppStatus?,
     val deviceInfo: NokiaDeviceInfo?,
+    val connectedClients: List<NokiaConnectedClient> = emptyList(),
     val loginPageEvidence: NokiaLoginPageEvidence? = null,
 )

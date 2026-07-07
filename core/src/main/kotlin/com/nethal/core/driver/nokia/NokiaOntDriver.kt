@@ -77,12 +77,14 @@ internal class NokiaOntDriver(
             val wanHtml = client.fetchAuthenticated("/show_wan_status.cgi?ipv4")
             val pppJson = client.fetchAuthenticated("/index.cgi?getppp")
             val deviceJson = client.fetchAuthenticated("/device_status.cgi")
+            val homeNetworkingHtml = client.fetchAuthenticated("/lan_status.cgi?wlan")
 
             NokiaDriverSnapshot(
                 gpon = NokiaResponseParser.parseGponStatus(gponHtml),
                 wan = NokiaResponseParser.parseWanStatus(wanHtml),
                 ppp = NokiaResponseParser.parsePppStatus(pppJson),
                 deviceInfo = NokiaResponseParser.parseDeviceInfo(deviceJson),
+                connectedClients = NokiaResponseParser.parseConnectedClients(homeNetworkingHtml),
                 loginPageEvidence = client.loginPageEvidence,
             )
         }

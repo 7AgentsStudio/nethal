@@ -56,3 +56,52 @@ internal fun errorLoginResponse(errT: Int): NokiaHttpResponse = NokiaHttpRespons
     headers = emptyMap(),
     cookies = emptyMap(),
 )
+
+internal fun sampleHomeNetworkingHtml(): String = """
+    <table>
+      <tr>
+        <th>Connection Type</th>
+        <th>Connected Devices</th>
+        <th>Setting</th>
+      </tr>
+      <tr>
+        <td>Ethernet</td>
+        <td>11</td>
+      </tr>
+    </table>
+    <table>
+      <tr>
+        <th>Status</th>
+        <th>Connection Type</th>
+        <th>Device Name</th>
+        <th>IPv4 Address</th>
+        <th>Hardware Address</th>
+        <th>IP Address Allocation</th>
+        <th>Lease Remaining</th>
+        <th>Last Active Time</th>
+        <th>Delete</th>
+      </tr>
+      <tr>
+        <td><span>Active</span></td>
+        <td>Ethernet</td>
+        <td>Notebook da TIM</td>
+        <td>192.168.1.71</td>
+        <td>08:b4:d2:34:ac:d8</td>
+        <td>DHCP</td>
+        <td>15 hours 8 min 38 sec</td>
+        <td>01/01/1970 12:23:59 AM</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Inactive</td>
+        <td>Wireless (5GHz)</td>
+        <td>Luiz-PC</td>
+        <td>192.168.1.89</td>
+        <td>90:de:80:91:1a:1a</td>
+        <td>DHCP</td>
+        <td>16 hours 7 min 22 sec</td>
+        <td>06/01/1970 12:42:20 AM</td>
+        <td><a href="?act=del&amp;oid=1">Delete</a></td>
+      </tr>
+    </table>
+""".trimIndent()

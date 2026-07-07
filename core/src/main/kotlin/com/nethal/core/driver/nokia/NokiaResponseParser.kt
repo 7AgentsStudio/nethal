@@ -108,6 +108,40 @@ internal object NokiaResponseParser {
         }
     }
 
+    fun parseConnectedClients(html: String): List<NokiaConnectedClient> {
+        return try {
+            val rows = extractHtmlTableRows(html)
+            val headerIndex = rows.indexOfFirst { row ->
+                row.size >= 8 &&
+                    row[0].equals("Status", ignoreCase = true) &&
+                    row[1].equals("Connection Type", ignoreCase = true) &&
+                    row[2].equals("Device Name", ignoreCase = true) &&
+                    row[3].equals("IPv4 Address", ignoreCase = true) &&
+                    row[4].equals("Hardware Address", ignoreCase = true)
+            }
+            if (headerIndex == -1) return emptyList()
+
+            rows.drop(headerIndex + 1)
+                .takeWhile { row -> row.size >= 8 && !row[0].equals("Status", ignoreCase = true) }
+                .mapNotNull { row ->
+                    val ipAddress = row.getOrNull(3).orEmpty()
+                    if (ipAddress.isBlank()) return@mapNotNull null
+                    NokiaConnectedClient(
+                        status = row.getOrNull(0).orEmpty(),
+                        connectionType = row.getOrNull(1).orEmpty(),
+                        deviceName = row.getOrNull(2).orEmpty(),
+                        ipAddress = ipAddress,
+                        macAddressMasked = maskMac(row.getOrNull(4).orEmpty()),
+                        allocation = row.getOrNull(5).orEmpty(),
+                        leaseRemaining = row.getOrNull(6).orEmpty(),
+                        lastActiveTime = row.getOrNull(7).orEmpty(),
+                    )
+                }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     // --- Extração tolerante de atribuições JS inline (não é JSON puro nestes 2 endpoints HTML) ---
 
     internal fun extractJsString(source: String, keys: List<String>): String? = keys.firstNotNullOfOrNull { key ->
@@ -164,6 +198,39 @@ internal object NokiaResponseParser {
             }
         }
         return null
+    }
+
+    private fun extractHtmlTableRows(html: String): List<List<String>> {
+        val rowRegex = Regex("""(?is)<tr\b[^>]*>(.*?)</tr>""")
+        val cellRegex = Regex("""(?is)<t[dh]\b[^>]*>(.*?)</t[dh]>""")
+        return rowRegex.findAll(html).mapNotNull { rowMatch ->
+            val cells = cellRegex.findAll(rowMatch.groupValues[1]).map { cellMatch ->
+                normalizeHtmlCell(cellMatch.groupValues[1])
+            }.filter { it.isNotEmpty() }.toList()
+            cells.takeIf { it.isNotEmpty() }
+        }.toList()
+    }
+
+    private fun normalizeHtmlCell(raw: String): String {
+        val withoutTags = raw.replace(Regex("""(?is)<[^>]+>"""), " ")
+        return decodeBasicHtmlEntities(withoutTags)
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+    }
+
+    private fun decodeBasicHtmlEntities(value: String): String = value
+        .replace("&nbsp;", " ")
+        .replace("&#160;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+
+    private fun maskMac(mac: String): String {
+        val parts = mac.split(":", "-")
+        if (parts.size != 6) return "**:**:**:**:**:**"
+        return "${parts[0]}:${parts[1]}:${parts[2]}:**:**:**"
     }
 
     // --- Conversões de unidade ---

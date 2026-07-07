@@ -40,6 +40,7 @@ class NokiaOntDriverTest {
         """.trimIndent(),
         "/index.cgi?getppp" to """{"ppp_status":[{"ConnectionStatus":"Connected","ConnectionType":"PPPoE","Name":"s","LastConnectionError":""}]}""",
         "/device_status.cgi" to """{"ModelName":"G-1425G-B","Manufacturer":"Nokia","SerialNumber":"ALCLXXXXXXXX","SoftwareVersion":"v1","HardwareVersion":"1.0","UpTime":100}""",
+        "/lan_status.cgi?wlan" to sampleHomeNetworkingHtml(),
     )
 
     @Test
@@ -59,6 +60,8 @@ class NokiaOntDriverTest {
         assertEquals("203.0.113.10", snapshot.wan?.externalIp)
         assertTrue(snapshot.ppp?.isConnected == true)
         assertEquals("G-1425G-B", snapshot.deviceInfo?.model)
+        assertEquals(2, snapshot.connectedClients.size)
+        assertEquals("08:b4:d2:**:**:**", snapshot.connectedClients.first().macAddressMasked)
     }
 
     @Test

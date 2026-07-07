@@ -212,6 +212,8 @@ private fun runNokia(ip: String, username: String) {
             println(snapshot.ppp?.toString() ?: "(não disponível / falha ao interpretar resposta)")
             println("--- Device Info ---")
             println(snapshot.deviceInfo?.toString() ?: "(não disponível / falha ao interpretar resposta)")
+            println("--- Clientes conectados ---")
+            if (snapshot.connectedClients.isEmpty()) println("(nenhum cliente interpretado)") else snapshot.connectedClients.forEach(::println)
             println("--- Evidência de fingerprint (Tela de login) ---")
             val evidence = snapshot.loginPageEvidence
             println("Título HTML: ${evidence?.httpTitle ?: "(não capturado)"}")

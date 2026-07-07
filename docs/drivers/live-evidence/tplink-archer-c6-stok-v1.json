@@ -48,8 +48,18 @@
   },
   "currentDriverStatus": {
     "previousFailure": "HTTP 403 INVALID_CREDENTIALS caused by h being calculated as md5(password) and s not matching firmware formula",
-    "currentObservedBehavior": "Driver now reaches HTTP 200 on form=login against real hardware, but still fails to extract stok from the encrypted response in the tested admin/admin run",
-    "likelyInterpretation": "Remaining mismatch is narrowed to post-login response handling or the tested credential, not the outer HTTP handshake"
+    "currentObservedBehavior": "Driver now reaches HTTP 200 on form=login against real hardware. In the tested admin/admin run, the browser itself decrypted the firmware response as login failed with failureCount=1 and attemptsAllowed=9",
+    "likelyInterpretation": "The outer HTTP handshake and sign/data envelope are substantially aligned. The remaining blocker on the tested unit is more likely the current credential than the transport layer itself",
+    "credentialFinding": {
+      "testedUsername": "admin",
+      "testedPassword": "admin",
+      "browserDecryptedResult": {
+        "errorcode": "login failed",
+        "success": false,
+        "failureCount": 1,
+        "attemptsAllowed": 9
+      }
+    }
   },
   "confirmedReadEndpointsWithoutFullCapabilityMapping": [
     "/cgi-bin/luci/;stok=/login?form=keys",
