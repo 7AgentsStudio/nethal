@@ -61,7 +61,7 @@ class FingerprintEngineTest {
         assertNull(result.vendor)
         assertNull(result.model)
         assertEquals(0.0, result.confidence, 0.0)
-        assertEquals("2026.07.07", result.manifestVersion)
+        assertEquals("2026.07.13", result.manifestVersion)
     }
 
     @Test
@@ -72,7 +72,12 @@ class FingerprintEngineTest {
         val registry = DefaultDriverRegistry(embeddedManifestLoader = ::loadEmbeddedCatalogResource)
         val engine = DefaultFingerprintEngine(probe, registry)
 
-        // 192.168.1.1 é candidateIp do profile TP-Link Archer C6 no manifesto real.
+        // 192.168.1.1 é candidateIp tanto do TP-Link Archer C6 quanto do Archer C20 no manifesto
+        // real (mesmo endpoint de gerência canônico da família Archer). Sem outra evidência, os
+        // dois empatam em confidence — o engine desempata pegando o primeiro na ordem em que
+        // DriverRegistry.profiles() devolve o catálogo (ordem do array `profiles` do JSON: C6
+        // antes de C20). Se o catálogo for reordenado, este teste pode passar a bater no C20 e
+        // precisa ser revisto — não é uma garantia de contrato do engine, só reflete a ordem atual.
         val result = engine.identify(target("192.168.1.1"))
 
         assertEquals("TP-Link", result.vendor)
@@ -87,7 +92,9 @@ class FingerprintEngineTest {
             vendor = "Synthetic",
             model = "Router X",
             deviceType = CatalogDeviceType.ROUTER,
-            family = "Synthetic family",
+            productLine = "Synthetic family",
+            platformId = "synthetic-platform",
+            driverFamilyId = "synthetic-driver",
             firmwareKnown = listOf("1.0.0"),
             stage = DriverStage.DRAFT,
             stageReason = "teste sintético",
@@ -149,7 +156,9 @@ class FingerprintEngineTest {
             vendor = "NullVendor",
             model = "Model Z",
             deviceType = CatalogDeviceType.ROUTER,
-            family = "teste",
+            productLine = "teste",
+            platformId = "test-platform",
+            driverFamilyId = "test-driver",
             stage = DriverStage.DRAFT,
             stageReason = "teste sintético",
             physicalTestAccess = false,

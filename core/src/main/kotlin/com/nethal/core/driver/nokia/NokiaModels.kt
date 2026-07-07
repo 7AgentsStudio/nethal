@@ -5,7 +5,7 @@ package com.nethal.core.driver.nokia
  * Não force estes campos dentro de `DeviceInfo`/`WifiStatus` genéricos: GPON, WAN e PPP são
  * conceitos próprios de ONT/RGW que ainda não têm equivalente no vocabulário genérico do core.
  * Capabilities candidatas destes tipos: READ_DEVICE_INFO, READ_WAN_STATUS, READ_SIGNAL,
- * READ_UPTIME, READ_FIRMWARE (ver catalog-2026.07.07.json, profile nokia_g1425gb_v1).
+ * READ_UPTIME, READ_FIRMWARE (ver catalog-2026.07.13.json, profile nokia_g1425gb_v1).
  */
 
 /** Status óptico GPON — potência RX/TX em dBm, temperatura do transceptor, tensão e corrente do laser. */
