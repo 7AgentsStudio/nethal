@@ -1,9 +1,15 @@
-package com.nethal.core.driver.tplink
+package com.nethal.core.driver.family.tplink.legacycgi
 
 /**
- * Codec do protocolo real do dispatcher `/cgi` do Archer C20 (profile `tplink_archer_c20_v1`),
- * confirmado por captura via DevTools contra unidade física do Luiz (2026-07-06, ver SIG-337/
- * SIG-338). Substitui o parser especulativo anterior (JSON por endpoint, REFUTED por HTTP 500).
+ * Codec do protocolo real do dispatcher `/cgi` da plataforma `tplink-legacy-cgi`, confirmado por
+ * captura via DevTools contra unidade física do Luiz (2026-07-06, ver SIG-337/SIG-338).
+ *
+ * Movido de `driver/tplink/TplinkC20ResponseParser.kt` no passo 4 do plano de refatoração HAL
+ * (`docs/architecture/hal-layering-model.md` §10) — lógica de parsing idêntica, sem mudança de
+ * comportamento; só o nome passou de "por modelo" (`TplinkC20*`) para "por plataforma"
+ * (`TpLinkLegacyCgi*`), já que nada aqui é específico do Archer C20 — os nomes de seção/campo
+ * concretos vêm de `profile.driverConfig` (`TpLinkLegacyCgiDriverConfig`), consumido por
+ * `TpLinkLegacyCgiDriverFamily`, nunca por este parser.
  *
  * Formato de request (corpo `text/plain`, um ou mais blocos, linhas terminadas em `\r\n`/CRLF —
  * confirmado por dois HARs reais, nunca LF puro):
@@ -38,10 +44,10 @@ package com.nethal.core.driver.tplink
  * Ao final do corpo, sempre um status global `[error]<codigo>` (0 = sucesso; qualquer outro valor
  * é tratado como falha genérica, significado exato dos códigos != 0 ainda não é conhecido).
  *
- * Parsing é defensivo em toda a extensão, mesma filosofia do parser do C6 (`TplinkResponseParser`)
- * e do parser especulativo anterior deste mesmo driver: campo ausente vira `null`, nunca exceção.
+ * Parsing é defensivo em toda a extensão, mesma filosofia do parser do C6 (`TplinkResponseParser`):
+ * campo ausente vira `null`, nunca exceção.
  */
-internal object TplinkC20ResponseParser {
+internal object TpLinkLegacyCgiResponseParser {
 
     /** Nome da seção de sessão, distinta de uma seção de dados normal. */
     private const val SESSION_BLOCK_NAME = "cgi"
@@ -144,13 +150,13 @@ internal object TplinkC20ResponseParser {
     fun firstLineForIndex(body: String, index: Int): Map<String, String> =
         linesForIndex(body, index).firstOrNull().orEmpty()
 
-    fun parseDeviceInfo(body: String, deviceInfoIndex: Int, ethSwitchIndex: Int, sysModeIndex: Int): TplinkC20DeviceInfo? {
+    fun parseDeviceInfo(body: String, deviceInfoIndex: Int, ethSwitchIndex: Int, sysModeIndex: Int): TpLinkLegacyCgiDeviceInfo? {
         val deviceFields = firstLineForIndex(body, deviceInfoIndex)
         val modelName = deviceFields["modelName"] ?: return null
         val ethFields = firstLineForIndex(body, ethSwitchIndex)
         val sysFields = firstLineForIndex(body, sysModeIndex)
 
-        return TplinkC20DeviceInfo(
+        return TpLinkLegacyCgiDeviceInfo(
             modelName = modelName,
             description = deviceFields["description"].orEmpty(),
             isFactoryDefault = deviceFields["X_TP_isFD"]?.let { it == "1" },
@@ -159,20 +165,20 @@ internal object TplinkC20ResponseParser {
         )
     }
 
-    fun parseWifiStatus(body: String, lanWlanIndex: Int): List<TplinkC20WifiStatus> {
+    fun parseWifiStatus(body: String, lanWlanIndex: Int): List<TpLinkLegacyCgiWifiStatus> {
         return linesForIndex(body, lanWlanIndex).mapNotNull { fields ->
             val name = fields["name"] ?: return@mapNotNull null
-            TplinkC20WifiStatus(
+            TpLinkLegacyCgiWifiStatus(
                 name = name,
                 ssid = fields["SSID"].orEmpty(),
             )
         }
     }
 
-    fun parseConnectedClients(body: String, lanHostEntryIndex: Int): List<TplinkC20ConnectedClient> {
+    fun parseConnectedClients(body: String, lanHostEntryIndex: Int): List<TpLinkLegacyCgiConnectedClient> {
         return linesForIndex(body, lanHostEntryIndex).mapNotNull { fields ->
             val ipAddress = fields["IPAddress"] ?: return@mapNotNull null
-            TplinkC20ConnectedClient(
+            TpLinkLegacyCgiConnectedClient(
                 hostname = fields["hostName"].orEmpty(),
                 ipAddress = ipAddress,
                 macAddressMasked = maskMac(fields["MACAddress"].orEmpty()),

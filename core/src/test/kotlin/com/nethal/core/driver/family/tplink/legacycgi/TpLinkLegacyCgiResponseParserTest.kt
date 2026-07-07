@@ -1,4 +1,4 @@
-package com.nethal.core.driver.tplink
+package com.nethal.core.driver.family.tplink.legacycgi
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,14 +7,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Testes do codec do protocolo real do dispatcher `/cgi` do Archer C20 — fixtures são as respostas
- * reais capturadas via DevTools contra unidade física do Luiz (2026-07-06, ver SIG-337/SIG-338).
+ * Testes do codec do protocolo real do dispatcher `/cgi` da plataforma `tplink-legacy-cgi` —
+ * fixtures são as respostas reais capturadas via DevTools contra unidade física do Luiz
+ * (2026-07-06, ver SIG-337/SIG-338).
+ *
+ * Movido de `driver/tplink/TplinkC20ResponseParserTest.kt` no passo 4 do plano de refatoração HAL
+ * (`docs/architecture/hal-layering-model.md` §10) — mesma cobertura, sem mudança de comportamento.
  */
-class TplinkC20ResponseParserTest {
+class TpLinkLegacyCgiResponseParserTest {
 
     @Test
     fun `buildRequestBody monta blocos de secao com indice e conta de campos, sem bloco de sessao automatico`() {
-        val body = TplinkC20ResponseParser.buildRequestBody(
+        val body = TpLinkLegacyCgiResponseParser.buildRequestBody(
             listOf(
                 "IGD_DEV_INFO" to listOf("modelName", "description", "X_TP_isFD"),
                 "ETH_SWITCH" to listOf("numberOfVirtualPorts"),
@@ -33,7 +37,7 @@ class TplinkC20ResponseParserTest {
 
     @Test
     fun `buildRequestBody inclui bloco de sessao cgi-info so quando explicitamente pedido, replicando o bundle real comprovado`() {
-        val body = TplinkC20ResponseParser.buildRequestBody(
+        val body = TpLinkLegacyCgiResponseParser.buildRequestBody(
             listOf(
                 "IGD_DEV_INFO" to listOf("modelName"),
                 "/cgi/info" to emptyList(),
@@ -46,7 +50,7 @@ class TplinkC20ResponseParserTest {
 
     @Test
     fun `buildRequestBody terminates every line with CRLF, never bare LF - confirmado por HAR real`() {
-        val body = TplinkC20ResponseParser.buildRequestBody(
+        val body = TpLinkLegacyCgiResponseParser.buildRequestBody(
             listOf("IGD_DEV_INFO" to listOf("modelName", "description")),
         )
 
@@ -60,27 +64,27 @@ class TplinkC20ResponseParserTest {
 
     @Test
     fun `extractGlobalErrorCode reads error code zero as success marker`() {
-        assertEquals(0, TplinkC20ResponseParser.extractGlobalErrorCode("[1,1,0,0,0,0]0\nmodelName=Archer C20\n[error]0"))
-        assertTrue(TplinkC20ResponseParser.isSuccess("[error]0"))
+        assertEquals(0, TpLinkLegacyCgiResponseParser.extractGlobalErrorCode("[1,1,0,0,0,0]0\nmodelName=Archer C20\n[error]0"))
+        assertTrue(TpLinkLegacyCgiResponseParser.isSuccess("[error]0"))
     }
 
     @Test
     fun `extractGlobalErrorCode reads non-zero code as failure`() {
-        assertEquals(1, TplinkC20ResponseParser.extractGlobalErrorCode("[error]1"))
-        assertFalse(TplinkC20ResponseParser.isSuccess("[error]1"))
+        assertEquals(1, TpLinkLegacyCgiResponseParser.extractGlobalErrorCode("[error]1"))
+        assertFalse(TpLinkLegacyCgiResponseParser.isSuccess("[error]1"))
     }
 
     @Test
     fun `extractGlobalErrorCode returns null when marker is absent`() {
-        assertNull(TplinkC20ResponseParser.extractGlobalErrorCode("resposta sem marcador reconhecido"))
-        assertFalse(TplinkC20ResponseParser.isSuccess(""))
+        assertNull(TpLinkLegacyCgiResponseParser.extractGlobalErrorCode("resposta sem marcador reconhecido"))
+        assertFalse(TpLinkLegacyCgiResponseParser.isSuccess(""))
     }
 
     @Test
     fun `parseDeviceInfo extracts fields from real captured bundle response`() {
         val body = deviceInfoBundleResponse().body
 
-        val info = TplinkC20ResponseParser.parseDeviceInfo(body, deviceInfoIndex = 0, ethSwitchIndex = 1, sysModeIndex = 2)
+        val info = TpLinkLegacyCgiResponseParser.parseDeviceInfo(body, deviceInfoIndex = 0, ethSwitchIndex = 1, sysModeIndex = 2)
 
         assertEquals("Archer C20", info?.modelName)
         assertEquals("Roteador Wireless Dual Band AC750", info?.description)
@@ -93,14 +97,14 @@ class TplinkC20ResponseParserTest {
     fun `parseDeviceInfo returns null when modelName field is absent - defensive, not exception`() {
         val body = "[1,1,0,0,0,0]0\ndescription=sem modelo\n[error]0"
 
-        assertNull(TplinkC20ResponseParser.parseDeviceInfo(body, deviceInfoIndex = 0, ethSwitchIndex = 1, sysModeIndex = 2))
+        assertNull(TpLinkLegacyCgiResponseParser.parseDeviceInfo(body, deviceInfoIndex = 0, ethSwitchIndex = 1, sysModeIndex = 2))
     }
 
     @Test
     fun `parseWifiStatus extracts multiple radio lines sharing the same block index`() {
         val body = lanWlanResponse().body
 
-        val radios = TplinkC20ResponseParser.parseWifiStatus(body, lanWlanIndex = 0)
+        val radios = TpLinkLegacyCgiResponseParser.parseWifiStatus(body, lanWlanIndex = 0)
 
         assertEquals(2, radios.size)
         assertEquals("wlan0", radios[0].name)
@@ -113,7 +117,7 @@ class TplinkC20ResponseParserTest {
     fun `parseConnectedClients extracts fields and masks MAC address to OUI only`() {
         val body = lanHostEntryResponse().body
 
-        val clients = TplinkC20ResponseParser.parseConnectedClients(body, lanHostEntryIndex = 0)
+        val clients = TpLinkLegacyCgiResponseParser.parseConnectedClients(body, lanHostEntryIndex = 0)
 
         assertEquals(1, clients.size)
         val client = clients.first()
@@ -127,7 +131,7 @@ class TplinkC20ResponseParserTest {
     fun `parseConnectedClients never leaks full MAC even with malformed input`() {
         val body = "[1,0,0,0,0,0]0\nMACAddress=not-a-real-mac\nhostName=x\nIPAddress=192.168.0.30\n[error]0"
 
-        val clients = TplinkC20ResponseParser.parseConnectedClients(body, lanHostEntryIndex = 0)
+        val clients = TpLinkLegacyCgiResponseParser.parseConnectedClients(body, lanHostEntryIndex = 0)
 
         assertEquals("**:**:**:**:**:**", clients.first().macAddressMasked)
     }
@@ -136,17 +140,17 @@ class TplinkC20ResponseParserTest {
     fun `parseConnectedClients returns empty list when IPAddress field is absent - defensive, not exception`() {
         val body = "[1,0,0,0,0,0]0\nMACAddress=AA:BB:CC:DD:EE:FF\nhostName=x\n[error]0"
 
-        assertEquals(emptyList<TplinkC20ConnectedClient>(), TplinkC20ResponseParser.parseConnectedClients(body, lanHostEntryIndex = 0))
+        assertEquals(emptyList<TpLinkLegacyCgiConnectedClient>(), TpLinkLegacyCgiResponseParser.parseConnectedClients(body, lanHostEntryIndex = 0))
     }
 
     @Test
     fun `session block cgi is never confused with a data section`() {
         val body = deviceInfoOnlyResponse().body
 
-        val info = TplinkC20ResponseParser.parseDeviceInfo(body, deviceInfoIndex = 0, ethSwitchIndex = 99, sysModeIndex = 98)
+        val info = TpLinkLegacyCgiResponseParser.parseDeviceInfo(body, deviceInfoIndex = 0, ethSwitchIndex = 99, sysModeIndex = 98)
 
         assertEquals("Archer C20", info?.modelName)
         // índice 1 é o bloco de sessão [cgi]1 no fixture — não deve ser interpretado como linha de dados válida
-        assertEquals(emptyList<Map<String, String>>(), TplinkC20ResponseParser.linesForIndex(body, 1))
+        assertEquals(emptyList<Map<String, String>>(), TpLinkLegacyCgiResponseParser.linesForIndex(body, 1))
     }
 }

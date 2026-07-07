@@ -2,6 +2,8 @@ package com.nethal.core.catalog
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 
 /**
  * Modelo Kotlin do manifesto de compatibilidade (schema documentado em
@@ -49,7 +51,20 @@ data class CompatibilityProfile(
     val vendor: String,
     val model: String,
     val deviceType: CatalogDeviceType,
-    val family: String,
+    // Linha de produto comercial (ex.: "Archer") — renomeado de `family` para não colidir com
+    // `driverFamilyId`, que é outro conceito (chave de resolução de Driver Family, HAL §5.6/§11.1).
+    val productLine: String,
+    // Metadado de catálogo apontando para a plataforma tecnológica compartilhada
+    // (ex. "tplink-encrypted-web", "nokia-gpon-rsa-aes"). Deliberadamente `String` simples, sem
+    // tipo Kotlin próprio — decisão explícita do Luiz (hal-layering-model.md §11.1).
+    val platformId: String,
+    // Chave de resolução no futuro Driver Family Registry (ainda não implementado — passo 6 do
+    // plano de refatoração). Por enquanto é só dado de catálogo, sem nenhuma lógica associada.
+    val driverFamilyId: String,
+    // Payload opaco de configuração específica do driver (endpoints, seções, mapeamento de
+    // campos). Cada Driver Family interpreta seu próprio formato — nenhum schema comum é imposto
+    // entre plataformas diferentes (ex. TP-Link vs Nokia).
+    val driverConfig: JsonElement = JsonNull,
     val firmwareKnown: List<String> = emptyList(),
     val stage: DriverStage,
     val stageReason: String,
@@ -96,6 +111,12 @@ enum class FingerprintEvidenceType {
     @SerialName("session_behavior") SESSION_BEHAVIOR,
     @SerialName("vendor_app_reference") VENDOR_APP_REFERENCE,
     @SerialName("product_documentation") PRODUCT_DOCUMENTATION,
+    // Referência a projeto open source de terceiros que documenta/testa o mesmo modelo (ex.:
+    // integração de Home Assistant para TP-Link) — achado incidental durante o passo 4 do plano de
+    // refatoração HAL, mesmo motivo de `FingerprintConfidenceLevel.REFUTED`: valor já existia em
+    // manifestos publicados desde catalog-2026.07.11, mas nenhum teste carregava essas versões via
+    // DefaultDriverRegistry até agora.
+    @SerialName("vendor_class_reference") VENDOR_CLASS_REFERENCE,
 }
 
 @Serializable
@@ -105,6 +126,12 @@ enum class FingerprintConfidenceLevel {
     MEDIUM,
     MEDIUM_HIGH,
     HIGH,
+    // Mecanismo/hipótese testado e refutado por evidência real (ex.: tentativa de login que
+    // retornou HTTP 500) — usado por `fingerprintEvidence[]` desde o manifesto catalog-2026.07.11
+    // (achado incidental durante o passo 4 do plano de refatoração HAL: o valor já existia em três
+    // manifestos publicados, mas nenhum teste carregava essas versões via DefaultDriverRegistry
+    // até agora, então a ausência deste valor no enum nunca quebrou nada em CI).
+    REFUTED,
 }
 
 /**

@@ -1,8 +1,15 @@
-package com.nethal.core.driver.tplink
+package com.nethal.core.driver.family.tplink.legacycgi
+
+import com.nethal.core.driver.tplink.TplinkHttpResponse
+import com.nethal.core.driver.tplink.TplinkHttpTransport
 
 /**
- * Fake determinístico de [TplinkHttpTransport] para o Archer C20, protocolo real confirmado por
- * captura via DevTools contra unidade física do Luiz (2026-07-06, ver SIG-337/SIG-338).
+ * Fake determinístico de [TplinkHttpTransport] para a plataforma `tplink-legacy-cgi`, protocolo
+ * real confirmado por captura via DevTools contra unidade física do Luiz (2026-07-06, ver
+ * SIG-337/SIG-338).
+ *
+ * Movido de `driver/tplink/FakeTplinkC20HttpTransport.kt` no passo 4 do plano de refatoração HAL
+ * (`docs/architecture/hal-layering-model.md` §10) — mesmo comportamento de fake, sem mudança.
  *
  * Diferente do mecanismo anterior (POST de login separado + GET de páginas), o protocolo real usa
  * um único dispatcher `POST /cgi?...`, sempre com o cookie `Authorization` (via `cookies`).
@@ -11,7 +18,7 @@ package com.nethal.core.driver.tplink
  * caso contrário, simula uma falha HTTP 401 (comportamento padrão de HTTP Basic Auth, não
  * capturado literalmente mas é o padrão do mecanismo).
  */
-internal class FakeTplinkC20HttpTransport(
+internal class FakeTpLinkLegacyCgiHttpTransport(
     private val expectedAuthorizationCookie: String? = null,
     private val responsesByRequestBody: Map<String, TplinkHttpResponse> = emptyMap(),
     private val defaultResponse: TplinkHttpResponse? = null,
