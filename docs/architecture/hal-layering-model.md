@@ -397,6 +397,81 @@ precisar revisar segurança de novo — só Diego valida evidência, exatamente 
 
 ---
 
+## 9.1 Caso real — TP-Link Archer C6 com duas plataformas por firmware
+
+Em 2026-07-07, teste real contra a unidade física de teste do Luiz (TP-Link Archer C6, recém
+resetada de fábrica, IP `192.168.0.1`) validou em produção, não só em teoria, exatamente o problema
+que motivou este documento inteiro: **o mesmo vendor + modelo comercial pode ter duas plataformas
+genuinamente diferentes conforme a geração de firmware.**
+
+O driver/profile existente (`tplink_archer_c6_v1`, mecanismo "web encrypted password": RSA sem
+padding + AES via `POST /cgi/getParm` + `POST /cgi_gdpr`, implementado em `TplinkOntDriver`/
+`TplinkAuthenticationClient`) falhou contra a unidade real: `POST /cgi/getParm` devolveu HTTP
+404 — o endpoint simplesmente não existe nesse firmware. Não foi um bug de driver nem de rede;
+probes passivos reais subsequentes (sem credencial) mostraram que a unidade roda um mecanismo de
+login inteiramente diferente:
+
+- `GET /` → redireciona (meta-refresh) para `/webpages/login.html`.
+- `/webpages/login.html` carrega scripts próprios de cifra client-side (`tpEncrypt.js`,
+  `cryptoJS.min.js`) — não a lib `TplinkAuthCrypto` que o driver atual usa.
+- Os quatro formulários de login encontrados (`form-first-login`, `form-login`, `form-login-bind`,
+  `form-forget-password`) têm todos `action="/cgi-bin/luci"` e **nenhum campo de usuário** — só
+  senha. Modelo de credencial diferente do mecanismo antigo (usuário + senha).
+
+Pesquisa comunitária complementar (`tplinkrouterc6u`/`home-assistant-tplink-router`, sucessor do
+`AlexandrErohin/TP-Link-Archer-C6U` já citado em `driver-adoption-strategy.md`) confirma que isso
+não é uma configuração isolada: o pacote documenta explicitamente **duas gerações de mecanismo de
+login para o mesmo hardware Archer C6/C6U** — a antiga ("Web Encrypted Password") e uma nova via
+`POST /cgi-bin/luci/;stok=/login?form=login` (token `stok` + cookie `sysauth`), com uma issue aberta
+no repositório afirmando que "firmwares mais novos não suportam mais Web Encrypted Password". É
+migração deliberada de plataforma pela TP-Link entre gerações de firmware, não capricho de uma
+unidade específica.
+
+**Resultado no catálogo** (`catalog-2026.07.14.json`, ver changelog completo em
+`docs/drivers/compatibility-catalog.md`): dois profiles distintos para o mesmo vendor+modelo
+comercial, exatamente como a arquitetura de §5.2/§5.6 prevê —
+
+| | `tplink_archer_c6_v1` (existente) | `tplink_archer_c6_stok_v1` (novo) |
+|---|---|---|
+| `platformId` | `tplink-encrypted-web` | `tplink-stok-luci` |
+| `driverFamilyId` | `tplink-encrypted-web-driver` | `tplink-stok-luci-driver` (ainda sem `DriverFamily` implementada) |
+| `stage` | `DRAFT` (evidência negativa registrada, não promovido) | `DISCOVERY_ONLY` (contato de rede real documentado, sem autenticação) |
+| Evidência desta rodada | Nova entrada `REFUTED` em `fingerprintEvidence[]` (`POST /cgi/getParm` → HTTP 404) | Toda a evidência de discovery passivo real (headers, estrutura de menu, mecanismo de auth) |
+
+Isso confirma em produção real a regra de decisão da tabela §9: um HAR/probe que mostra um
+mecanismo de autenticação que nenhuma Authentication Strategy/Driver Family existente consegue
+expressar justifica **Profile novo com Platform/Driver Family própria**, nunca forçar o dado no
+mesmo Profile só porque o vendor/modelo comercial é idêntico. Sem a camada Platform separada do
+Profile "TP-Link Archer C6", este caso teria virado uma mistura confusa de campos condicionais
+dentro de um único profile, ou pior, teria sido tratado como "bug" do profile existente em vez de
+"plataforma nova".
+
+### Gap conhecido — `DriverRegistry.findProfile(vendor, model)` fica ambíguo com dois profiles
+
+`DriverRegistry.findProfile(vendor, model)` (`core/src/main/kotlin/com/nethal/core/catalog/
+DriverRegistry.kt`) resolve com `currentManifest.profiles.firstOrNull { vendor+model match }` —
+assume implicitamente **um único profile por combinação vendor+modelo**. Com dois profiles reais
+TP-Link/Archer C6 no catálogo agora, essa função é genuinamente ambígua: sempre devolve
+`tplink_archer_c6_v1` (primeiro no array), mesmo quando a unidade física do usuário roda a
+plataforma `tplink-stok-luci`. Essa função é usada hoje pelo fluxo de identificação manual (Tela 3,
+spec §11) — um usuário que digitar "TP-Link" + "Archer C6" manualmente sempre cai no profile errado
+para uma unidade `stok`/luci real.
+
+O `FingerprintEngine` automático (`core/src/main/kotlin/com/nethal/core/fingerprint/
+FingerprintEngine.kt`) **não tem esse problema**: ele pontua todos os profiles do catálogo contra a
+evidência coletada (§5.3/§8 passo 2) e escolhe pelo score, nunca busca por vendor+modelo — os dois
+profiles TP-Link C6 vão competir normalmente pela evidência real (o `stok`/luci deve pontuar mais
+alto contra uma unidade que exiba a estrutura `/webpages/login.html` + `/cgi-bin/luci`, o
+`encrypted-web` deve pontuar mais alto contra uma unidade que responda em `/cgi/getParm`).
+
+Registrado aqui como **gap conhecido, não corrigido nesta rodada** — é puramente trabalho de
+catálogo/pesquisa (nenhum driver Kotlin novo foi implementado para este caso), e a correção de
+`findProfile` pertence ao Bruno (mudança de interface pública do `DriverRegistry`), não ao escopo de
+Diego. Fica como pendência explícita para quando a Tela 3 (identificação manual) for implementada
+ou revisada — ver `docs/product/specification.md` §11.
+
+---
+
 ## 10. Plano de refatoração (preservando o máximo do código existente)
 
 Nenhuma etapa abaixo deve começar antes deste documento ser aprovado. Ordem sugerida, cada uma um PR

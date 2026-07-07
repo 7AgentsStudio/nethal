@@ -11,11 +11,11 @@ import java.io.File
 class DriverRegistryTest {
 
     @Test
-    fun `loads embedded manifest with the three real profiles`() {
+    fun `loads embedded manifest with the four real profiles`() {
         val registry = DefaultDriverRegistry(embeddedManifestLoader = ::loadEmbeddedCatalogResource)
 
-        assertEquals("2026.07.13", registry.manifestVersion())
-        assertEquals(3, registry.profiles().size)
+        assertEquals("2026.07.14", registry.manifestVersion())
+        assertEquals(4, registry.profiles().size)
     }
 
     @Test
@@ -49,8 +49,8 @@ class DriverRegistryTest {
         val result = registry.sync()
 
         assertTrue(result is CatalogSyncResult.Failed)
-        assertEquals(3, registry.profiles().size)
-        assertEquals("2026.07.13", registry.manifestVersion())
+        assertEquals(4, registry.profiles().size)
+        assertEquals("2026.07.14", registry.manifestVersion())
     }
 
     @Test
@@ -60,15 +60,15 @@ class DriverRegistryTest {
         val result = registry.sync()
 
         assertTrue(result is CatalogSyncResult.NotAttempted)
-        assertEquals("2026.07.13", registry.manifestVersion())
+        assertEquals("2026.07.14", registry.manifestVersion())
     }
 
     /**
      * Rede de segurança contra o bug corrigido em `loadEmbeddedCatalogResource`: o default da
      * função apontava para `catalog-2026.07.07.json` enquanto o diretório de recursos já tinha
-     * manifestos mais novos (até `catalog-2026.07.13.json`), tornando profiles/drivers recém
-     * adicionados (ex.: `tplink_archer_c20_v1`) inalcançáveis em runtime real — só os testes que
-     * apontavam manualmente para o arquivo certo enxergavam o catálogo verdadeiro.
+     * manifestos mais novos, tornando profiles/drivers recém adicionados (ex.:
+     * `tplink_archer_c20_v1`, `tplink_archer_c6_stok_v1`) inalcançáveis em runtime real — só os
+     * testes que apontavam manualmente para o arquivo certo enxergavam o catálogo verdadeiro.
      *
      * Este teste lê os nomes de arquivo reais em `core/src/main/resources/catalog/` (mesma pasta
      * usada pelo classpath em runtime) e compara com o manifesto que

@@ -307,6 +307,63 @@ C20 como `TpLinkLegacyCgiDriverFamily`), aprovado com esta ressalva documentada.
 
 ## Changelog
 
+- **2026-07-07 (TP-Link Archer C6 tem duas plataformas por firmware — refutação real + profile
+  novo `tplink_archer_c6_stok_v1`)** — Teste real contra a unidade física de teste do Luiz (Archer
+  C6, recém resetada de fábrica, IP `192.168.0.1`) refutou o mecanismo que o profile
+  `tplink_archer_c6_v1` (driver atual `TplinkOntDriver`/`TplinkAuthenticationClient`, "web
+  encrypted password": RSA sem padding + AES via `POST /cgi/getParm` + `POST /cgi_gdpr`) descreve:
+  `POST /cgi/getParm` devolveu HTTP 404 — o endpoint não existe neste firmware. Investigação
+  subsequente (probes passivos reais, sem credencial, mais pesquisa comunitária) revelou que esta
+  unidade roda um mecanismo de login completamente diferente, do tipo `stok`/luci. Novo manifesto
+  `catalog-2026.07.14.json` (`previousManifest: catalog-2026.07.13.json`):
+  - **`tplink_archer_c6_v1` (inalterado em `stage`, continua `DRAFT`)**: ganhou uma entrada nova em
+    `fingerprintEvidence[]` do tipo `auth_mechanism` com `confidenceLevel: REFUTED`, documentando o
+    HTTP 404 real contra a unidade do Luiz; `knownFirmwareBugs[]` ganhou uma entrada confirmada
+    documentando que pelo menos uma geração de firmware da linha Archer C6 abandona completamente
+    o mecanismo "Web Encrypted Password" em favor do mecanismo `stok`/luci; `physicalTestAccess`
+    volta para `true` (o Luiz tem uma unidade Archer C6 física real, só que ela não roda este
+    mecanismo específico); `confidenceScoreOverall` recalculado de `0.4` para `0.35` (a categoria
+    "autenticação testada" não pode mais contribuir em cenário otimista, já que a única execução
+    real terminou em refutação, não em ausência de teste). Nenhuma capability nem `stage` mudou
+    além do necessário para registrar esta evidência negativa — o profile segue `DRAFT`.
+  - **`tplink_archer_c6_stok_v1` (novo, `DISCOVERY_ONLY`)**: mesma família comercial (`vendor:
+    "TP-Link"`, `model: "Archer C6"`), plataforma tecnológica diferente —
+    `platformId: "tplink-stok-luci"`, `driverFamilyId: "tplink-stok-luci-driver"` (driver ainda não
+    implementado, é só o identificador previsto). `stage: "DISCOVERY_ONLY"` pelo mesmo critério já
+    aplicado ao driver Nokia: houve contato de rede real e documentado (probes sem credencial)
+    antes de qualquer tentativa de autenticação. Evidência real capturada em 2026-07-07, toda sem
+    credencial: `POST /cgi/getParm` → HTTP 404 (controle negativo, motivou a investigação);
+    `GET /` → HTTP 200, sem header `Server`, redireciona via meta-refresh para
+    `/webpages/login.html`; `GET /webpages/login.html` → HTTP 200, título genérico `Opening...`,
+    scripts `tpEncrypt.js`/`cryptoJS.min.js` (cifra client-side própria, diferente de
+    `TplinkAuthCrypto`), quatro formulários (`form-first-login`, `form-login`, `form-login-bind`,
+    `form-forget-password`) todos com `action="/cgi-bin/luci"` e **nenhum com campo de usuário** —
+    autenticação só por senha. Evidência complementar de pesquisa comunitária (não teste real):
+    pacote `tplinkrouterc6u`/`home-assistant-tplink-router` (sucessor de
+    `AlexandrErohin/TP-Link-Archer-C6U`, já citado em `driver-adoption-strategy.md`) documenta duas
+    gerações de login para o mesmo hardware — a antiga ("Web Encrypted Password") e uma nova via
+    `POST /cgi-bin/luci/;stok=/login?form=login` com corpo JSON `sign`/`data`, chaves buscadas em
+    `GET/POST /cgi-bin/luci/;stok=/login?form=keys`, sessão via token `stok` + cookie `sysauth`; uma
+    issue aberta no repositório (`home-assistant-tplink-router#31`) afirma que firmwares mais novos
+    não suportam mais Web Encrypted Password. Todas as capabilities ficam `UNKNOWN` (nenhuma
+    leitura autenticada ainda). `physicalTestAccess: true` (mesma unidade física do Luiz).
+    `confidenceScoreOverall: 0.35` (evidência de endpoint/estrutura real + evidência comunitária
+    forte, mas zero autenticação testada, por design de `DISCOVERY_ONLY`).
+
+  Este é o primeiro caso real (não hipotético) em que o mesmo vendor+modelo comercial exige dois
+  profiles distintos por divergência genuina de plataforma entre gerações de firmware — documentado
+  em detalhe em `docs/architecture/hal-layering-model.md`, nova seção "Caso real — TP-Link Archer C6
+  com duas plataformas por firmware". Gap conhecido registrado no mesmo documento (não corrigido
+  nesta rodada): `DriverRegistry.findProfile(vendor, model)` usa `firstOrNull` e assume um único
+  profile por vendor+modelo — com dois profiles TP-Link/Archer C6 agora reais no catálogo, essa
+  função fica ambígua (sempre resolve para `tplink_archer_c6_v1`, o primeiro no array, mesmo quando
+  a unidade real do usuário roda `tplink_archer_c6_stok_v1`). Usado hoje só pelo fluxo de
+  identificação manual (Tela 3) — o `FingerprintEngine` automático já não tem esse problema, porque
+  pontua todos os profiles por evidência em vez de buscar por vendor+modelo. Nenhum código Kotlin
+  de driver foi implementado ou alterado nesta rodada (`core/driver/`, `core/auth/` intocados) —
+  isso é trabalho de catálogo/pesquisa, esperando por teste real de login bem-sucedido antes de
+  qualquer implementação de Driver Family nova.
+
 - **2026-07-07 (nota de risco de `driverConfig`, revisão de segurança da Marisa)** — Adiciona a
   seção "Riscos — `driverConfig` como superfície futura de dado não confiável" acima, ressalva
   obrigatória da revisão de segurança do passo 4 do plano de refatoração HAL (reorganização do C20
