@@ -363,6 +363,16 @@ core/src/main/kotlin/com/nethal/core/
    `profile.capabilities[]` para saber quais `CapabilityId` declarar como `AVAILABLE`/
    `EXPERIMENTAL`/etc., e delega leitura real para a `DriverFamily` instanciada — nunca pergunta
    "é TP-Link?", sempre "este profile declara `READ_WIFI_STATUS`?".
+
+   **Atualização 2026-07-08 (issue #16)**: a metade "sessão" deste passo está implementada —
+   `core/capability/CapabilityEngine.kt` autentica de forma lazy contra uma `DriverFamily` já
+   resolvida, reaproveita a sessão entre leituras e renova automaticamente em caso de expiração
+   (`CapabilityReadResult.SessionExpired`), ver KDoc da classe para a decisão de arquitetura
+   completa. A metade "consultar `profile.capabilities[]` do catálogo para declarar estado inicial
+   por capability" **continua fora de escopo** — o `CapabilityEngine` de hoje só decide sessão
+   (autenticado ou não) e repassa o resultado de `DriverFamily.readCapability(id)` como está; ele
+   não olha o catálogo. Primeiro uso real: `TpLinkStokLuciDriverFamily` (`READ_WIFI_STATUS`,
+   `READ_LAN_STATUS`, `READ_WAN_STATUS`, `READ_CONNECTED_CLIENTS`).
 6. **Command Executor** e **Safety Guard** operam sobre `CapabilityId`, nunca sabem qual Driver
    Family está por trás — sem mudança de desenho, só reforça que a fronteira certa já estava correta
    nessas duas camadas superiores.

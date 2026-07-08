@@ -78,3 +78,16 @@ consequências acima, atualiza os testes que hoje esperam `ssidHash`/`macAddress
 (`core/src/test/kotlin/com/nethal/core/driver/family/tplink/stokluci/`) e atualiza o KDoc de
 `TpLinkStokLuciModels.kt` que hoje descreve a sanitização como regra da spec §8.9 aplicada "já na
 origem" — essa frase deve ser removida/corrigida para refletir esta decisão.
+
+## Extensão 2026-07-08 (Bruno, issue #16 — Capability Engine com sessão real)
+
+Esta decisão se aplicava só ao modelo interno de `TpLinkStokLuciDriverFamily`
+(`TpLinkStokLuciWifiRadio`/`TpLinkStokLuciLanStatus`/`TpLinkStokLuciConnectedClient`, todos
+`internal`). O modelo **público** do SDK (`core/model/WifiStatus.kt`) ainda carregava o campo
+`ssidHash: String?` — nunca usado por nenhum código até `TpLinkStokLuciDriverFamily.readCapability`
+se tornar o primeiro leitor real a precisar devolver `WifiStatus` de verdade (ver
+`core/model/CapabilityPayload.kt`). Mesmo raciocínio desta ADR, generalizado por ela mesma ("este
+padrão vale para toda Driver Family futura, não só `tplink-stok-luci`") ao primeiro ponto de contato
+real: `WifiRadio.ssidHash` renomeado para `ssid` (dado bruto), `docs/product/specification.md` §13
+atualizada em conjunto. Não é uma decisão nova, é a aplicação da decisão já registrada aqui ao único
+lugar que ainda não tinha sido ajustado porque nada o consumia ainda.

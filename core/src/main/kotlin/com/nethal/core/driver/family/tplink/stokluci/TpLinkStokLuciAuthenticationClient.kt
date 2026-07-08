@@ -13,6 +13,18 @@ internal enum class TpLinkStokLuciLoginFailureReason {
     AUTH_ENDPOINT_UNAVAILABLE,
     INVALID_CREDENTIALS,
     UNEXPECTED_RESPONSE,
+
+    /**
+     * Sinaliza que uma chamada autenticada ([TpLinkStokLuciAuthenticationClient.fetchAuthenticated])
+     * pós-login falhou com HTTP 401/403 — heurística conservadora para "sessão/token `stok` expirou",
+     * distinta de [INVALID_CREDENTIALS] (que hoje só é usado durante o próprio [login]). Sem
+     * confirmação por evidência ao vivo de como o firmware sinaliza expiração real de sessão (ainda
+     * não foi capturado um `stok` expirando contra o hardware do Luiz) — mesmo código HTTP usado por
+     * `login()` para credencial inválida, reaproveitado aqui porque é o único sinal observável
+     * disponível. Diego: confirmar contra hardware real quando possível (ver KDoc de
+     * [TpLinkStokLuciAuthenticationClient.fetchAuthenticated]).
+     */
+    SESSION_EXPIRED,
 }
 
 internal class TpLinkStokLuciLoginException(
@@ -271,6 +283,12 @@ internal class TpLinkStokLuciAuthenticationClient(
      * plataforma (`sign` + `data`, com reuso da chave/IV AES e da chave RSA de assinatura da
      * sessão). Hoje cobre só leitura simples do endpoint de status validado ao vivo; o parsing
      * estruturado dos campos continua fora de escopo desta entrega.
+     *
+     * HTTP 401/403 aqui é tratado como [TpLinkStokLuciLoginFailureReason.SESSION_EXPIRED] — ver KDoc
+     * do enum para o motivo dessa heurística ainda não ter confirmação por evidência ao vivo de
+     * expiração real. Chamado repetidamente pelo mesmo [TpLinkStokLuciDriverFamily]/mesma sessão a
+     * partir da issue #16 (Capability Engine com gerenciamento de sessão real): antes, cada leitura
+     * fazia login novo, então uma sessão nunca vivia tempo suficiente para expirar entre chamadas.
      */
     @Throws(IOException::class)
     fun fetchAuthenticated(path: String, query: String): String {
@@ -302,6 +320,12 @@ internal class TpLinkStokLuciAuthenticationClient(
         val requestBody = "sign=$signHex&data=$encodedData"
         val url = "$baseUrl/cgi-bin/luci/;stok=${currentSession.stok}/$path?$requestQuery"
         val response = transport.post(url, requestBody, authenticatedHeaders(currentSession))
+        if (response.statusCode == 401 || response.statusCode == 403) {
+            throw TpLinkStokLuciLoginException(
+                TpLinkStokLuciLoginFailureReason.SESSION_EXPIRED,
+                "leitura autenticada falhou: status=${response.statusCode} (sessão/token stok provavelmente expirado)",
+            )
+        }
         if (response.statusCode != 200) {
             throw TpLinkStokLuciLoginException(
                 TpLinkStokLuciLoginFailureReason.UNEXPECTED_RESPONSE,

@@ -99,7 +99,7 @@ class TpLinkStokLuciDriverFamilyTest {
     }
 
     @Test
-    fun `readCapability always returns Unavailable - no Capability Engine session management yet`() = runTest {
+    fun `readCapability without a prior authenticate() call always returns Unavailable`() = runTest {
         val transport = FakeTpLinkStokLuciHttpTransport()
         val driver = TpLinkStokLuciDriverFamily("192.168.0.1", realProfileConfig(), transport)
 
@@ -119,7 +119,7 @@ class TpLinkStokLuciDriverFamilyTest {
 
         val supportedButSessionless = driver.readCapability(com.nethal.core.model.CapabilityId.READ_WIFI_STATUS)
             as com.nethal.core.catalog.CapabilityReadResult.Unavailable
-        assertTrue(supportedButSessionless.reason.contains("readSnapshot"))
+        assertTrue(supportedButSessionless.reason.contains("authenticate"))
     }
 
     @Test

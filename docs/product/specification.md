@@ -754,13 +754,48 @@ type WifiRadio = {
   id: string;
   band: "2.4GHz" | "5GHz" | "6GHz" | "UNKNOWN";
   enabled?: boolean;
-  ssidHash?: string;
+  ssid?: string;
   channel?: number;
   bandwidth?: string;
   security?: string;
   clientCount?: number;
 };
 ```
+
+`ssid` carrega dado bruto (não hash) — corrigido de `ssidHash` (2026-07-08) por
+`docs/architecture/adr/0001-fronteira-sanitizacao-telemetria.md`: sanitização de telemetria (hash de
+SSID, mascaramento de MAC/IP) é responsabilidade exclusiva de um futuro Telemetry Collector,
+aplicada só na fronteira de exportação — o NetHAL Lab é ferramenta local-first e precisa mostrar ao
+usuário o nome real da própria rede Wi-Fi para cumprir o propósito de diagnóstico.
+
+### WanStatus, LanStatus, ClientList
+
+```typescript
+type WanStatus = {
+  ipv4Address?: string;
+};
+
+type LanStatus = {
+  macAddress?: string;
+  ipv4Address?: string;
+};
+
+type ClientList = {
+  clients: ConnectedClient[];
+};
+
+type ConnectedClient = {
+  hostname?: string;
+  ipAddress?: string;
+  macAddress?: string;
+};
+```
+
+Tipos implícitos em §12 (`readWanStatus(): Promise<WanStatus>`, `readClients(): Promise<ClientList>`)
+nunca tinham sido detalhados nesta seção — preenchidos em 2026-07-08 ao implementar o primeiro
+leitor real (`TpLinkStokLuciDriverFamily`/issue #16), espelhando `core/model/WanStatus.kt`,
+`core/model/LanStatus.kt` e `core/model/ConnectedClient.kt`. Mesma regra de dado bruto de
+`WifiRadio.ssid` acima (ADR 0001) — sem mascaramento de MAC/IP neste modelo local.
 
 ### Capability
 

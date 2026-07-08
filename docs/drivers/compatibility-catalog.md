@@ -327,6 +327,50 @@ C20 como `TpLinkLegacyCgiDriverFamily`), aprovado com esta ressalva documentada.
 
 ## Changelog
 
+- **2026-07-08 (issue #16 — Capability Engine com gerenciamento de sessão real; `tplink-stok-luci`
+  sai do estado "sempre `Unavailable`")** — `DriverFamily.readCapability(id)` deixa de ser stub em
+  `TpLinkStokLuciDriverFamily`: novo componente `core/capability/CapabilityEngine.kt` autentica de
+  forma preguiçosa (lazy, na primeira leitura), reaproveita a sessão entre chamadas e renova
+  automaticamente (uma única tentativa) quando a Driver Family sinaliza `CapabilityReadResult.
+  SessionExpired`. A sessão real (token `stok`, cookie `sysauth`, chave/IV AES) continua vivendo
+  dentro da própria `TpLinkStokLuciDriverFamily` (campo `authenticatedClient`, preenchido pelo novo
+  `authenticate()`); o `CapabilityEngine` guarda só a credencial crua em memória, exclusivamente
+  para poder reautenticar sozinho, nunca persistida em disco/log (ver KDoc de `CapabilityEngine`
+  para a decisão de arquitetura completa e o racional de onde cada peça de estado vive).
+  `login()`/`readStatusRaw()`/`readSnapshot()` (usados por `ManualCheckRunner`) não foram alterados
+  — continuam fazendo login novo a cada chamada, comportamento já validado ao vivo; `authenticate()`/
+  `readCapability()` são um caminho adicional, não uma substituição.
+
+  Novo tipo `CapabilityReadResult.SessionExpired(reason)`, distinto de `Failure`, para o driver
+  sinalizar expiração de sessão sem sobrecarregar `Failure.reason` com texto livre — mapeado a
+  partir de HTTP 401/403 numa leitura autenticada pós-login (`TpLinkStokLuciLoginFailureReason.
+  SESSION_EXPIRED`, novo). **Sem confirmação por evidência ao vivo de como o firmware sinaliza
+  expiração real do `stok`** (nunca foi capturado um token expirando contra o hardware do Luiz) —
+  heurística conservadora reaproveitando o mesmo código HTTP usado por `login()` para credencial
+  inválida. Diego: confirmar contra hardware real quando possível.
+
+  `CapabilityReadResult.Success` ganhou um campo `payload: CapabilityPayload` (novo, em
+  `core/model/CapabilityPayload.kt`) — antes só carregava a declaração `Capability`
+  (estado/confidence/reason), sem nenhum dado de fato; sem isso, `readCapability` não tinha como
+  cumprir o que promete. Novos tipos de modelo público `LanStatus`, `WanStatus`, `ConnectedClient`/
+  `ConnectedClientList` (`core/model/`), espelhando o que `docs/product/specification.md` §12 já
+  previa (`readWanStatus()`, `readClients()`) sem nunca ter sido detalhado em §13 — sinalizado para
+  Rafael atualizar §13 formalmente. `WifiRadio.ssidHash` renomeado para `ssid` (dado bruto), mesma
+  extensão do ADR 0001 (ver entrada abaixo) ao primeiro consumidor real desse tipo — `specification.md`
+  §13 atualizada em conjunto.
+
+  **Estágio do profile:** permanece `READ_ONLY_ALPHA`, sem promoção (fora de escopo desta issue —
+  critério de promoção é `/ciclo-vida-driver`, decisão de Rafael). Escopo estritamente `READ_ONLY`,
+  nenhuma ação de escrita.
+
+  **Testes:** `core/src/test/kotlin/com/nethal/core/capability/CapabilityEngineTest.kt` (política
+  genérica de sessão contra uma `DriverFamily` fake — criação lazy, reaproveitamento, renovação,
+  credencial nunca exposta) e `core/src/test/kotlin/com/nethal/core/driver/family/tplink/stokluci/
+  TpLinkStokLuciCapabilityEngineIntegrationTest.kt` (ponta a ponta real contra
+  `TpLinkStokLuciDriverFamily` + `FakeTpLinkStokLuciHttpTransport`, incluindo simulação de expiração
+  de sessão via novo parâmetro `expireAuthenticatedReadsAfter` do fake). Suíte completa do `core`
+  (197 testes) permanece verde.
+
 - **2026-07-07 (mapeamento das capabilities restantes do `tplink-stok-luci`, manifesto
   `catalog-2026.07.21.json`)** — Revisão dos três pontos em aberto deixados pela rodada anterior
   (parser estruturado + ADR 0001), sem coleta de evidência ao vivo nova. Nenhuma capability nova

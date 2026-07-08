@@ -35,6 +35,13 @@ internal class FakeTpLinkStokLuciHttpTransport(
     private val statusResponse: HttpTransportResponse? = null,
     private val simulateRealServerStok: String? = null,
     private val simulateRealServerEncryptedLoginPayload: String? = null,
+    /**
+     * Simula expiração de sessão (issue #16): a partir da (N+1)-ésima leitura autenticada feita sob
+     * o mesmo login (`N` = este valor), o "servidor" fake passa a responder 401 em vez de cifrar o
+     * corpo normalmente — até o próximo `form=login` bem-sucedido, que reseta a contagem. `null`
+     * (default) desliga a simulação, mantendo o comportamento anterior (nunca expira).
+     */
+    private val expireAuthenticatedReadsAfter: Int? = null,
 ) : HttpTransport {
 
     var postCallCount = 0
@@ -42,6 +49,7 @@ internal class FakeTpLinkStokLuciHttpTransport(
     val postedUrls = mutableListOf<String>()
     var lastLoginBody: String? = null
         private set
+    private var authenticatedReadCountSinceLogin = 0
 
     /** Strings decimais de 16 digitos (chave/IV AES) extraidas do envelope `sign` decifrado no ultimo login simulado - ver [simulateLoginResponse]. */
     var lastCapturedAesKeyDigits: String? = null
@@ -71,6 +79,7 @@ internal class FakeTpLinkStokLuciHttpTransport(
                 ?: (if (simulateRealServerStok != null) authSuccessResponse() else HttpTransportResponse(404, "", emptyMap(), emptyMap()))
             url.contains("form=login") -> {
                 lastLoginBody = body
+                authenticatedReadCountSinceLogin = 0
                 when {
                     simulateRealServerEncryptedLoginPayload != null -> simulateEncryptedLoginResponse(body, simulateRealServerEncryptedLoginPayload)
                     simulateRealServerStok != null -> simulateLoginResponse(body, simulateRealServerStok)
@@ -80,7 +89,15 @@ internal class FakeTpLinkStokLuciHttpTransport(
             else -> {
                 lastAuthenticatedRequestBody = body
                 when {
-                    simulateRealServerStok != null -> simulateAuthenticatedReadResponse(body)
+                    simulateRealServerStok != null -> {
+                        authenticatedReadCountSinceLogin++
+                        val expireAfter = expireAuthenticatedReadsAfter
+                        if (expireAfter != null && authenticatedReadCountSinceLogin > expireAfter) {
+                            HttpTransportResponse(401, "", emptyMap(), emptyMap())
+                        } else {
+                            simulateAuthenticatedReadResponse(body)
+                        }
+                    }
                     else -> statusResponse ?: HttpTransportResponse(200, "{}", emptyMap(), emptyMap())
                 }
             }
