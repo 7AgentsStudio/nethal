@@ -20,6 +20,8 @@ class MainActivity : ComponentActivity() {
             networkEnvironmentReader = app.networkEnvironmentReader,
             fingerprintEngine = app.fingerprintEngine,
             manualIdentificationRepository = app.manualIdentificationRepository,
+            driverRegistry = app.driverRegistry,
+            driverFamilyRegistry = app.driverFamilyRegistry,
         )
 
         setContent {

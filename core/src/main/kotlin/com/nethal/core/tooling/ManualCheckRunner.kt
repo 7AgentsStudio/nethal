@@ -2,6 +2,7 @@ package com.nethal.core.tooling
 
 import com.nethal.core.catalog.DefaultDriverRegistry
 import com.nethal.core.catalog.loadEmbeddedCatalogResource
+import com.nethal.core.discovery.PrivateIpRanges
 import com.nethal.core.driver.family.defaultDriverFamilyRegistry
 import com.nethal.core.driver.family.tplink.legacycgi.TpLinkLegacyCgiDriverFamily
 import com.nethal.core.driver.family.tplink.legacycgi.TpLinkLegacyCgiReadOutcome
@@ -9,8 +10,9 @@ import com.nethal.core.driver.family.tplink.stokluci.TpLinkStokLuciDriverFamily
 import com.nethal.core.driver.family.tplink.stokluci.TpLinkStokLuciLoginOutcome
 import com.nethal.core.driver.family.tplink.stokluci.TpLinkStokLuciSnapshotOutcome
 import com.nethal.core.driver.family.tplink.stokluci.TpLinkStokLuciStatusOutcome
-import com.nethal.core.driver.nokia.NokiaDriverResult
-import com.nethal.core.driver.nokia.NokiaOntDriver
+import com.nethal.core.driver.nokia.NokiaAuthenticationClient
+import com.nethal.core.driver.nokia.NokiaLoginException
+import com.nethal.core.driver.nokia.NokiaResponseParser
 import com.nethal.core.driver.tplink.TplinkCipherVariant
 import com.nethal.core.driver.tplink.TplinkDriverResult
 import com.nethal.core.driver.tplink.TplinkOntDriver
@@ -183,6 +185,18 @@ private fun runTplinkC6(ip: String, username: String, cipherVariantArg: String?)
 
 // --- Nokia G-1425G-B (nokia_g1425gb_v1) — caminho direto, ainda não é Driver Family. ---
 
+/**
+ * Diagnóstico temporário: em vez de `NokiaOntDriver.readSnapshot` (que só expõe o snapshot já
+ * parseado), usa `NokiaAuthenticationClient` diretamente para imprimir o corpo bruto de cada um
+ * dos 5 endpoints lado a lado com o resultado do `NokiaResponseParser` — único jeito de saber se
+ * uma falha de parsing é campo renomeado (variante de firmware) ou sessão rejeitada pelo
+ * equipamento (corpo de erro/redirecionamento em vez do corpo esperado). Login único, uma leitura
+ * por endpoint — não repete a sessão para não martelar o equipamento real.
+ *
+ * Nunca imprime a senha nem o `sid`/`X-SID` da sessão. O corpo bruto impresso pode conter SSID em
+ * claro, MAC completo, IP público ou serial — mascare antes de colar em qualquer lugar (catálogo,
+ * issue, chat), mesma regra de sanitização da spec §8.9.
+ */
 private fun runNokia(ip: String, username: String) {
     val password = readPasswordInteractively("Nokia")
     if (password.isBlank()) {
@@ -190,41 +204,66 @@ private fun runNokia(ip: String, username: String) {
         return
     }
 
-    println("Conectando em $ip como \"$username\"...")
-
-    val driver = try {
-        NokiaOntDriver(ip)
-    } catch (e: IllegalArgumentException) {
-        println("Host recusado: ${e.message}")
+    if (!PrivateIpRanges.isPrivate(ip)) {
+        println("Host recusado: só opera contra IP privado (RFC 1918) da LAN; host recebido: $ip")
         return
     }
 
-    val result = runBlocking { driver.readSnapshot(username, password) }
+    println("Conectando em $ip como \"$username\"...")
 
-    when (result) {
-        is NokiaDriverResult.Success -> {
-            val snapshot = result.snapshot
-            println()
-            println("--- GPON ---")
-            println(snapshot.gpon?.toString() ?: "(não disponível / falha ao interpretar resposta)")
-            println("--- WAN ---")
-            println(snapshot.wan?.toString() ?: "(não disponível / falha ao interpretar resposta)")
-            println("--- PPP ---")
-            println(snapshot.ppp?.toString() ?: "(não disponível / falha ao interpretar resposta)")
-            println("--- Device Info ---")
-            println(snapshot.deviceInfo?.toString() ?: "(não disponível / falha ao interpretar resposta)")
-            println("--- Clientes conectados ---")
-            if (snapshot.connectedClients.isEmpty()) println("(nenhum cliente interpretado)") else snapshot.connectedClients.forEach(::println)
-            println("--- Evidência de fingerprint (Tela de login) ---")
-            val evidence = snapshot.loginPageEvidence
-            println("Título HTML: ${evidence?.httpTitle ?: "(não capturado)"}")
-            println("Header Server: ${evidence?.serverHeader ?: "(não capturado / ausente na resposta)"}")
-            println("(dados não sensíveis — sem credencial; copie estes dois valores para o catálogo de compatibilidade)")
-        }
-        is NokiaDriverResult.Failure -> {
-            println("Falha: ${result.reason} — ${result.message}")
-        }
+    val client = NokiaAuthenticationClient(ip)
+    try {
+        client.login(username, password)
+    } catch (e: NokiaLoginException) {
+        println("Falha no login: ${e.reason} — ${e.message}")
+        return
+    } catch (e: Exception) {
+        println("Falha no login: ${e.message}")
+        return
     }
+
+    println()
+    println("--- Evidência de fingerprint (Tela de login) ---")
+    val evidence = client.loginPageEvidence
+    println("Título HTML: ${evidence?.httpTitle ?: "(não capturado)"}")
+    println("Header Server: ${evidence?.serverHeader ?: "(não capturado / ausente na resposta)"}")
+    println("(dados não sensíveis — sem credencial; copie estes dois valores para o catálogo de compatibilidade)")
+
+    val endpoints = listOf(
+        "GPON" to "/wan_status.cgi?gpon",
+        "WAN" to "/show_wan_status.cgi?ipv4",
+        "PPP" to "/index.cgi?getppp",
+        "Device Info" to "/device_status.cgi",
+        "Clientes conectados" to "/lan_status.cgi?wlan",
+    )
+
+    val bodies = mutableMapOf<String, String>()
+    for ((label, path) in endpoints) {
+        println()
+        println("--- $label ($path) ---")
+        val raw = try {
+            client.fetchAuthenticated(path)
+        } catch (e: Exception) {
+            println("Falha ao buscar: ${e.message}")
+            continue
+        }
+        bodies[label] = raw
+        println("Corpo bruto (${raw.length} chars — mascare SSID/MAC completo/IP público/serial antes de colar em qualquer lugar):")
+        println(raw.take(3000))
+        if (raw.length > 3000) println("... (truncado, ${raw.length - 3000} chars a mais)")
+    }
+
+    println()
+    println("--- Comparação com NokiaResponseParser (o que o driver de produção conseguiria extrair deste corpo) ---")
+    bodies["GPON"]?.let { println("GPON: ${NokiaResponseParser.parseGponStatus(it) ?: "(parser não encontrou os campos esperados neste corpo)"}") }
+    bodies["WAN"]?.let { println("WAN: ${NokiaResponseParser.parseWanStatus(it) ?: "(parser não encontrou os campos esperados neste corpo)"}") }
+    bodies["PPP"]?.let { println("PPP: ${NokiaResponseParser.parsePppStatus(it) ?: "(parser não encontrou os campos esperados neste corpo)"}") }
+    bodies["Device Info"]?.let { println("Device Info: ${NokiaResponseParser.parseDeviceInfo(it) ?: "(parser não encontrou os campos esperados neste corpo)"}") }
+    bodies["Clientes conectados"]?.let {
+        val clients = NokiaResponseParser.parseConnectedClients(it)
+        println("Clientes conectados: ${if (clients.isEmpty()) "(nenhum interpretado)" else clients.toString()}")
+    }
+    println("(reporte esta comparação bruto x parseado para corrigir NokiaResponseParser se for divergência de formato — não decida promoção de estágio sozinho)")
 }
 
 // --- TP-Link Archer C20 (tplink_archer_c20_v1) — único caminho via DriverRegistry/DriverFamilyRegistry hoje. ---

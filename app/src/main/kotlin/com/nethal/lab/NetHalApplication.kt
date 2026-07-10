@@ -2,6 +2,7 @@ package com.nethal.lab
 
 import android.app.Application
 import com.nethal.core.catalog.DefaultDriverRegistry
+import com.nethal.core.catalog.DriverFamilyRegistry
 import com.nethal.core.catalog.DriverRegistry
 import com.nethal.core.catalog.ManualIdentificationRepository
 import com.nethal.core.catalog.loadEmbeddedCatalogResource
@@ -11,6 +12,7 @@ import com.nethal.core.discovery.DefaultSsdpDiscoverer
 import com.nethal.core.discovery.DefaultUpnpIgdProbe
 import com.nethal.core.discovery.DiscoveryEngine
 import com.nethal.core.discovery.NetworkEnvironmentReader
+import com.nethal.core.driver.family.defaultDriverFamilyRegistry
 import com.nethal.core.fingerprint.DefaultFingerprintEngine
 import com.nethal.core.fingerprint.DefaultHttpFingerprintProbe
 import com.nethal.core.fingerprint.FingerprintEngine
@@ -34,6 +36,9 @@ class NetHalApplication : Application() {
     lateinit var driverRegistry: DriverRegistry
         private set
 
+    lateinit var driverFamilyRegistry: DriverFamilyRegistry
+        private set
+
     lateinit var fingerprintEngine: FingerprintEngine
         private set
 
@@ -52,6 +57,7 @@ class NetHalApplication : Application() {
         )
 
         driverRegistry = DefaultDriverRegistry(embeddedManifestLoader = ::loadEmbeddedCatalogResource)
+        driverFamilyRegistry = defaultDriverFamilyRegistry()
         fingerprintEngine = DefaultFingerprintEngine(
             httpFingerprintProbe = DefaultHttpFingerprintProbe(),
             driverRegistry = driverRegistry,

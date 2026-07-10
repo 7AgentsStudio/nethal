@@ -22,6 +22,11 @@ sealed interface EquipmentDetectedUiState {
         val manifestGeneratedAt: String,
         val isLowConfidence: Boolean,
         val correctionSubmitted: Boolean,
+        // `null` quando nenhum profile do catálogo bateu com confiança suficiente (mesmo caso de
+        // `vendor`/`model` nulos). A Tela 5 (Autenticação) usa este id para resolver o
+        // `CompatibilityProfile`/Driver Family reais via `DriverRegistry`/`DriverFamilyRegistry` —
+        // ver `AuthenticationViewModel`.
+        val matchedProfileId: String?,
     ) : EquipmentDetectedUiState
 }
 
