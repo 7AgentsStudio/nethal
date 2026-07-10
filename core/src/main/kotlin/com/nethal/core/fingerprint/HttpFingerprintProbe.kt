@@ -47,6 +47,13 @@ class DefaultHttpFingerprintProbe(
 
             val statusCode = try {
                 connection.responseCode
+            } catch (_: SecurityException) {
+                // Cleartext bloqueado pela plataforma (Network Security Config/OS policy) — não é
+                // timeout nem host inalcançável, é a rede recusando HTTP puro para este destino.
+                // Contrato inalterado: `probe()` continua retornando `null` em qualquer falha; a
+                // distinção existe só para quem lê o código, sem side-effect nem log aqui, para não
+                // gerar ruído a cada IP inalcançável/timeout comum durante o discovery.
+                null
             } catch (_: Exception) {
                 null
             }
@@ -67,6 +74,11 @@ class DefaultHttpFingerprintProbe(
                 wwwAuthenticateHeader = wwwAuthenticateHeader,
                 statusCode = statusCode,
             )
+        } catch (_: SecurityException) {
+            // Mesma distinção do catch interno (cleartext bloqueado pela plataforma) — cobre o caso
+            // de a exceção surgir em outro ponto do fluxo (ex.: leitura de header/stream), não só em
+            // `responseCode`. Resultado observável idêntico: `null`.
+            null
         } catch (_: Exception) {
             null
         } finally {
