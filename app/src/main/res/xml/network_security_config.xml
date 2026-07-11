@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cleartext HTTP (sem TLS) é indispensável aqui: quase todo equipamento de rede doméstico/SMB
+    alvo do NetHAL (roteador, ONT, AP) serve a WebUI/API de gestão em HTTP puro na LAN, sem
+    certificado — é assim que TR-064, LuCI/ubus, MikroTik REST etc. funcionam na prática.
+
+    Limitação real do Android Network Security Config: `<domain-config>`/`<domain>` são
+    estritamente baseados em hostname (match exato ou `includeSubdomains` para sufixo). NÃO existe
+    suporte a notação CIDR/faixa de IP (ex.: "192.168.0.0/16") no `<domain>` — declarar isso ali
+    daria a falsa impressão de restringir por IP privado sem de fato restringir nada (o parser trata
+    a string como um hostname literal, que nunca dá match). Não fazemos esse teatro de segurança.
+
+    A restrição real a RFC 1918 (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) é aplicada em runtime,
+    antes de qualquer conexão HTTP sair do app — mesmo guard usado pelo Discovery Engine:
+    `PrivateIpRanges.isPrivate()` (core/discovery/UpnpIgdProbe.kt), consultado por
+    `HttpFingerprintProbe.isProbeAllowed()` e por qualquer novo consumidor do HttpTransport
+    compartilhado antes de montar a URL de destino. Cleartext liberado aqui só habilita o
+    `HttpURLConnection` a completar o handshake — não abre a rede para qualquer domínio público;
+    quem decide o destino é sempre a lógica de aplicação, nunca o manifesto.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
