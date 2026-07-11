@@ -57,7 +57,7 @@ A promoção entre estágios é **decisão de produto do Rafael** (maturidade e 
 - `docs/drivers/driver-model.md` — capabilities e estados
 - `docs/drivers/local-drivers-brazil.md` — drivers relevantes para o mercado brasileiro
 - `docs/protocols/local-protocols.md` e `unified-management-brazil.md` — protocolos locais suportados
-- `docs/design/` — brief de design e assets de marca (NetHAL tem marca própria, distinta do SignallQ)
+- `docs/design/` — design system completo (tokens, componentes, motion), protótipos navegáveis e assets de marca (NetHAL tem marca própria, distinta do SignallQ); resumo consultável via skill `/nethal-design`
 - `CONTRIBUTING.md` / `SECURITY.md` — regras de contribuição e segurança
 
 ## Escopo fora do MVP
@@ -95,6 +95,7 @@ Fluxo padrão: Rafael refina e distribui → Vera desenha (se houver UI) → Bru
 - `/seguranca-nethal` — bloqueios do Safety Guard, regras de autenticação e sanitização de telemetria
 - `/ciclo-vida-driver` — estágios de driver e critérios de promoção, incluindo entrada no SignallQ
 - `/regras-android-nethal` — permissões, Wi-Fi e limites de background para discovery no Android
+- `/nethal-design` — design system do NetHAL Lab: tokens de cor, tipografia, espaçamento, componentes, motion e marca
 
 ## Convenções
 
