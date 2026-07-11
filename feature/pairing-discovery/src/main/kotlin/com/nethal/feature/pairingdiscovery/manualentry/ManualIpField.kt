@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.manualentry
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 
 /**
  * Campo de IP manual — extraído de `DiscoveryFailedScreen`/`MultipleCandidatesScreen` (decisão
@@ -41,24 +41,24 @@ fun ManualIpField(
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = PairingTokens.TextPrimary,
-                unfocusedTextColor = PairingTokens.TextPrimary,
-                focusedBorderColor = PairingTokens.Accent,
-                unfocusedBorderColor = PairingTokens.Border,
-                focusedContainerColor = PairingTokens.Surface,
-                unfocusedContainerColor = PairingTokens.Surface,
+                focusedTextColor = OnBackgroundDark,
+                unfocusedTextColor = OnBackgroundDark,
+                focusedBorderColor = NetHalAccent,
+                unfocusedBorderColor = BorderDark,
+                focusedContainerColor = SurfaceDark,
+                unfocusedContainerColor = SurfaceDark,
             ),
             modifier = Modifier.fillMaxWidth(),
         )
 
         if (error != null) {
-            Text(text = error, color = PairingTokens.Error, fontSize = 12.sp)
+            Text(text = error, color = ErrorDark, fontSize = 12.sp)
         }
 
         Button(
             onClick = onSubmit,
             enabled = value.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = PairingTokens.Accent),
+            colors = ButtonDefaults.buttonColors(containerColor = NetHalAccent),
             shape = RoundedCornerShape(18.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {

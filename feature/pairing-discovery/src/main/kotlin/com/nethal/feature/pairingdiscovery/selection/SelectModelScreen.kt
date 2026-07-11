@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.selection
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -25,7 +26,6 @@ import com.nethal.core.catalog.CompatibilityProfile
 import com.nethal.feature.pairingdiscovery.internal.BackButton
 import com.nethal.feature.pairingdiscovery.internal.BreadcrumbTrail
 import com.nethal.feature.pairingdiscovery.internal.PairingInfoDialog
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 import com.nethal.feature.pairingdiscovery.internal.RouterGlyph
 import com.nethal.feature.pairingdiscovery.internal.SelectableListRow
 import com.nethal.feature.pairingdiscovery.internal.StatusChip
@@ -52,11 +52,11 @@ fun SelectModelScreen(
     var pendingResearchModel by remember { mutableStateOf<ModelOption?>(null) }
     val models = remember(profiles, type, vendor) { modelOptions(profiles, type, vendor) }
 
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(24.dp),
         ) {
@@ -64,7 +64,7 @@ fun SelectModelScreen(
                 BackButton(onClick = onBack)
                 Text(
                     text = "Selecionar equipamento",
-                    color = PairingTokens.TextPrimary,
+                    color = OnBackgroundDark,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 10.dp),
@@ -80,8 +80,8 @@ fun SelectModelScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = PairingTokens.Surface, shape = RoundedCornerShape(22.dp))
-                    .border(width = 1.dp, color = PairingTokens.Border, shape = RoundedCornerShape(22.dp)),
+                    .background(color = SurfaceDark, shape = RoundedCornerShape(22.dp))
+                    .border(width = 1.dp, color = BorderDark, shape = RoundedCornerShape(22.dp)),
             ) {
                 models.forEach { option ->
                     SelectableListRow(
@@ -89,14 +89,14 @@ fun SelectModelScreen(
                         subtitle = typeLabel,
                         leadingIcon = {
                             RouterGlyph(
-                                tint = if (option.enabled) PairingTokens.TextSecondary else PairingTokens.TextTertiary,
+                                tint = if (option.enabled) OnSurfaceVariantDark else OnSurfaceTertiaryDark,
                                 size = 19.dp,
                             )
                         },
                         trailingContent = {
                             StatusChip(
                                 label = option.supportLevel.uiLabel(),
-                                color = if (option.enabled) PairingTokens.Success else PairingTokens.TextTertiary,
+                                color = if (option.enabled) SuccessDark else OnSurfaceTertiaryDark,
                             )
                         },
                         enabled = option.enabled,

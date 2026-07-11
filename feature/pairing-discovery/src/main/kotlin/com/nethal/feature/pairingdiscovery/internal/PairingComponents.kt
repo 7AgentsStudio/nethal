@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.internal
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,14 +61,14 @@ internal fun BreadcrumbTrail(steps: List<String>, currentLabel: String, modifier
         steps.forEach { step ->
             Box(
                 modifier = Modifier
-                    .background(color = PairingTokens.Accent.copy(alpha = 0.12f), shape = RoundedCornerShape(999.dp))
+                    .background(color = NetHalAccent.copy(alpha = 0.12f), shape = RoundedCornerShape(999.dp))
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             ) {
-                Text(text = step, color = PairingTokens.Accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = step, color = NetHalAccent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         if (currentLabel.isNotEmpty()) {
-            Text(text = currentLabel, color = PairingTokens.TextTertiary, fontSize = 11.5.sp)
+            Text(text = currentLabel, color = OnSurfaceTertiaryDark, fontSize = 11.5.sp)
         }
     }
 }
@@ -90,7 +91,7 @@ internal fun SelectableListRow(
     Row(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.4f)
-            .background(if (highlighted) PairingTokens.AccentSoftBackground else Color.Transparent)
+            .background(if (highlighted) AccentSoftBackgroundDark else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -100,12 +101,12 @@ internal fun SelectableListRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = if (highlighted) PairingTokens.Accent else PairingTokens.TextPrimary,
+                color = if (highlighted) NetHalAccent else OnBackgroundDark,
                 fontSize = 14.5.sp,
                 fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Normal,
             )
             if (subtitle != null) {
-                Text(text = subtitle, color = PairingTokens.TextSecondary, fontSize = 11.sp)
+                Text(text = subtitle, color = OnSurfaceVariantDark, fontSize = 11.sp)
             }
         }
         trailingContent?.invoke()
@@ -129,7 +130,7 @@ internal fun PairingInfoDialog(
     AlertDialog(
         onDismissRequest = { (onDismiss ?: onConfirm)() },
         title = { Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp) },
-        text = { Text(text = body, fontSize = 13.sp, color = PairingTokens.TextSecondary) },
+        text = { Text(text = body, fontSize = 13.sp, color = OnSurfaceVariantDark) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(confirmLabel) }
         },
@@ -138,8 +139,8 @@ internal fun PairingInfoDialog(
         } else {
             null
         },
-        containerColor = PairingTokens.Surface,
-        titleContentColor = PairingTokens.TextPrimary,
+        containerColor = SurfaceDark,
+        titleContentColor = OnBackgroundDark,
     )
 }
 
@@ -149,14 +150,14 @@ internal fun AvatarInitial(letter: String, highlighted: Boolean) {
         modifier = Modifier
             .size(30.dp)
             .background(
-                color = if (highlighted) PairingTokens.Accent.copy(alpha = 0.14f) else PairingTokens.BackgroundPrincipal,
+                color = if (highlighted) NetHalAccent.copy(alpha = 0.14f) else BackgroundDark,
                 shape = RoundedCornerShape(9.dp),
             ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = letter,
-            color = if (highlighted) PairingTokens.Accent else PairingTokens.TextSecondary,
+            color = if (highlighted) NetHalAccent else OnSurfaceVariantDark,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
         )

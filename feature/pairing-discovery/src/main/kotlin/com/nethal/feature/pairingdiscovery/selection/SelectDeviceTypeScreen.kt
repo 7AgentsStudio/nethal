@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.selection
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,6 @@ import com.nethal.core.catalog.CatalogDeviceType
 import com.nethal.core.catalog.CompatibilityProfile
 import com.nethal.feature.pairingdiscovery.internal.BackButton
 import com.nethal.feature.pairingdiscovery.internal.PairingInfoDialog
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 import com.nethal.feature.pairingdiscovery.internal.RouterGlyph
 import com.nethal.feature.pairingdiscovery.internal.SelectableListRow
 
@@ -43,11 +43,11 @@ fun SelectDeviceTypeScreen(
     var unavailableTypeLabel by remember { mutableStateOf<String?>(null) }
     val options = remember(profiles) { deviceTypeOptions(profiles) }
 
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(24.dp),
         ) {
@@ -55,7 +55,7 @@ fun SelectDeviceTypeScreen(
                 BackButton(onClick = onBack)
                 Text(
                     text = "Selecionar equipamento",
-                    color = PairingTokens.TextPrimary,
+                    color = OnBackgroundDark,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 10.dp),
@@ -64,7 +64,7 @@ fun SelectDeviceTypeScreen(
 
             Text(
                 text = "Etapa 1 de 3 · Tipo de equipamento",
-                color = PairingTokens.TextTertiary,
+                color = OnSurfaceTertiaryDark,
                 fontSize = 11.5.sp,
                 modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
             )
@@ -72,13 +72,13 @@ fun SelectDeviceTypeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = PairingTokens.Surface, shape = RoundedCornerShape(22.dp))
-                    .border(width = 1.dp, color = PairingTokens.Border, shape = RoundedCornerShape(22.dp)),
+                    .background(color = SurfaceDark, shape = RoundedCornerShape(22.dp))
+                    .border(width = 1.dp, color = BorderDark, shape = RoundedCornerShape(22.dp)),
             ) {
                 options.forEach { option ->
                     SelectableListRow(
                         title = option.label,
-                        leadingIcon = { RouterGlyph(tint = if (option.available) PairingTokens.TextSecondary else PairingTokens.TextTertiary, size = 20.dp) },
+                        leadingIcon = { RouterGlyph(tint = if (option.available) OnSurfaceVariantDark else OnSurfaceTertiaryDark, size = 20.dp) },
                         enabled = option.available,
                         onClick = {
                             if (option.available) {

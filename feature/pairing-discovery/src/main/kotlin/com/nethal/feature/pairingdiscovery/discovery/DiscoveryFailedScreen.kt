@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.discovery
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 
 /**
  * Tela 2b (falha) — descoberta automática não encontrou nenhum candidato: sem gateway
@@ -38,11 +38,11 @@ fun DiscoveryFailedScreen(
     onSelectManually: () -> Unit,
     onEnterIpManually: () -> Unit,
 ) {
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
@@ -50,20 +50,20 @@ fun DiscoveryFailedScreen(
         ) {
             Text(
                 text = "Não foi possível encontrar sua rede",
-                color = PairingTokens.TextPrimary,
+                color = OnBackgroundDark,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
 
             Text(
                 text = probableReasonText(reason),
-                color = PairingTokens.TextSecondary,
+                color = OnSurfaceVariantDark,
                 fontSize = 13.sp,
             )
 
             Button(
                 onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = PairingTokens.Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = NetHalAccent),
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -72,15 +72,15 @@ fun DiscoveryFailedScreen(
 
             Text(
                 text = "Ou continue sem descoberta automática:",
-                color = PairingTokens.TextTertiary,
+                color = OnSurfaceTertiaryDark,
                 fontSize = 11.5.sp,
             )
 
             Button(
                 onClick = onSelectManually,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PairingTokens.Surface,
-                    contentColor = PairingTokens.TextPrimary,
+                    containerColor = SurfaceDark,
+                    contentColor = OnBackgroundDark,
                 ),
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -90,7 +90,7 @@ fun DiscoveryFailedScreen(
 
             OutlinedButton(
                 onClick = onEnterIpManually,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = PairingTokens.TextSecondary),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurfaceVariantDark),
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {

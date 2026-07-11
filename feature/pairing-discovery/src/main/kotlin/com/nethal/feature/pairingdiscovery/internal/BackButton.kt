@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.internal
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,8 +26,8 @@ fun BackButton(onClick: () -> Unit) {
     Canvas(
         modifier = Modifier
             .size(32.dp)
-            .background(color = PairingTokens.Surface, shape = CircleShape)
-            .border(width = 1.dp, color = PairingTokens.Border, shape = CircleShape)
+            .background(color = SurfaceDark, shape = CircleShape)
+            .border(width = 1.dp, color = BorderDark, shape = CircleShape)
             .clickable(onClick = onClick),
     ) {
         val strokeWidth = 2.dp.toPx()
@@ -40,7 +41,7 @@ fun BackButton(onClick: () -> Unit) {
         }
         drawPath(
             path = path,
-            color = PairingTokens.TextPrimary,
+            color = OnBackgroundDark,
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }

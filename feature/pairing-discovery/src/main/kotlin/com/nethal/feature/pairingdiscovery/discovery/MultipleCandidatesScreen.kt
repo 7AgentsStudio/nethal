@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.discovery
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,7 +26,6 @@ import androidx.compose.ui.unit.sp
 import com.nethal.core.model.NetworkTarget
 import com.nethal.core.model.TargetRole
 import com.nethal.core.model.TargetSource
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 import com.nethal.feature.pairingdiscovery.manualentry.ManualIpField
 
 /**
@@ -44,11 +44,11 @@ fun MultipleCandidatesScreen(
 ) {
     var manualIp by remember { mutableStateOf("") }
 
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
@@ -56,14 +56,14 @@ fun MultipleCandidatesScreen(
         ) {
             Text(
                 text = "Encontramos mais de um equipamento",
-                color = PairingTokens.TextPrimary,
+                color = OnBackgroundDark,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
 
             Text(
                 text = "Escolha qual equipamento você quer testar.",
-                color = PairingTokens.TextSecondary,
+                color = OnSurfaceVariantDark,
                 fontSize = 13.sp,
             )
 
@@ -71,7 +71,7 @@ fun MultipleCandidatesScreen(
                 Text(
                     text = "Pode haver um equipamento adicional entre você e a internet " +
                         "(ex.: ONT da operadora).",
-                    color = PairingTokens.Warning,
+                    color = WarningDark,
                     fontSize = 12.5.sp,
                 )
             }
@@ -84,7 +84,7 @@ fun MultipleCandidatesScreen(
 
             Text(
                 text = "Ou informe outro equipamento manualmente:",
-                color = PairingTokens.TextPrimary,
+                color = OnBackgroundDark,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -104,17 +104,17 @@ private fun CandidateCard(device: NetworkTarget, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color = PairingTokens.Surface, shape = RoundedCornerShape(20.dp))
-            .border(width = 1.dp, color = PairingTokens.Border, shape = RoundedCornerShape(20.dp))
+            .background(color = SurfaceDark, shape = RoundedCornerShape(20.dp))
+            .border(width = 1.dp, color = BorderDark, shape = RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(text = device.ip, color = PairingTokens.TextPrimary, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
-        Text(text = roleLabel(device.role), color = PairingTokens.TextSecondary, fontSize = 12.5.sp)
+        Text(text = device.ip, color = OnBackgroundDark, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+        Text(text = roleLabel(device.role), color = OnSurfaceVariantDark, fontSize = 12.5.sp)
         Text(
             text = "Origem: ${sourceLabel(device.source)}",
-            color = PairingTokens.TextTertiary,
+            color = OnSurfaceTertiaryDark,
             fontSize = 11.sp,
         )
     }

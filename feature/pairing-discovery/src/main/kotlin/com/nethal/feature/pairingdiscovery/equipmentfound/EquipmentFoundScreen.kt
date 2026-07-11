@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.equipmentfound
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nethal.core.model.DetectedProtocol
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 import com.nethal.feature.pairingdiscovery.internal.RouterGlyph
 import com.nethal.feature.pairingdiscovery.internal.StatusChip
 import java.util.Locale
@@ -58,19 +58,19 @@ fun EquipmentFoundScreen(viewModel: EquipmentDetectedViewModel, onContinue: (mat
 
 @Composable
 private fun IdentifyingContent() {
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         ) {
-            RouterGlyph(tint = PairingTokens.Accent, size = 28.dp)
+            RouterGlyph(tint = NetHalAccent, size = 28.dp)
             Text(
                 text = "Identificando o equipamento...",
-                color = PairingTokens.TextPrimary,
+                color = OnBackgroundDark,
                 fontSize = 15.sp,
             )
         }
@@ -85,11 +85,11 @@ private fun IdentifiedContent(
 ) {
     var showCorrectionForm by remember { mutableStateOf(state.isLowConfidence) }
 
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
@@ -97,7 +97,7 @@ private fun IdentifiedContent(
         ) {
             Text(
                 text = "1 roteador encontrado",
-                color = PairingTokens.TextPrimary,
+                color = OnBackgroundDark,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -105,45 +105,45 @@ private fun IdentifiedContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = PairingTokens.Surface, shape = RoundedCornerShape(26.dp))
-                    .border(width = 1.dp, color = PairingTokens.Accent, shape = RoundedCornerShape(26.dp))
+                    .background(color = SurfaceDark, shape = RoundedCornerShape(26.dp))
+                    .border(width = 1.dp, color = NetHalAccent, shape = RoundedCornerShape(26.dp))
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    RouterGlyph(tint = PairingTokens.Accent, size = 28.dp)
+                    RouterGlyph(tint = NetHalAccent, size = 28.dp)
                     Column(modifier = Modifier.padding(start = 14.dp)) {
                         Text(
                             text = state.vendor?.let { vendor -> "$vendor ${state.model.orEmpty()}".trim() }
                                 ?: "Equipamento não identificado",
-                            color = PairingTokens.TextPrimary,
+                            color = OnBackgroundDark,
                             fontSize = 14.5.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        Text(text = state.targetIp, color = PairingTokens.TextSecondary, fontSize = 11.sp)
+                        Text(text = state.targetIp, color = OnSurfaceVariantDark, fontSize = 11.sp)
                     }
                 }
 
                 Text(
                     text = "Firmware: ${state.firmware ?: "não disponível"}",
-                    color = PairingTokens.TextSecondary,
+                    color = OnSurfaceVariantDark,
                     fontSize = 12.5.sp,
                 )
                 Text(
                     text = "Protocolo detectado: ${protocolsLabel(state.detectedProtocols)}",
-                    color = PairingTokens.TextSecondary,
+                    color = OnSurfaceVariantDark,
                     fontSize = 12.5.sp,
                 )
 
                 StatusChip(
                     label = "Confiança: ${confidencePercentLabel(state.confidence)}",
-                    color = if (state.isLowConfidence) PairingTokens.Warning else PairingTokens.Success,
+                    color = if (state.isLowConfidence) WarningDark else SuccessDark,
                 )
 
                 if (state.isLowConfidence) {
                     Text(
                         text = "Confiança baixa — considere corrigir a identificação abaixo.",
-                        color = PairingTokens.Warning,
+                        color = WarningDark,
                         fontSize = 12.sp,
                     )
                 }
@@ -153,14 +153,14 @@ private fun IdentifiedContent(
                 text = "Catálogo de compatibilidade: versão ${state.manifestVersion} " +
                     "(atualizado em ${state.manifestGeneratedAt}). A identificação pode estar " +
                     "desatualizada se o catálogo for antigo.",
-                color = PairingTokens.TextTertiary,
+                color = OnSurfaceTertiaryDark,
                 fontSize = 11.sp,
             )
 
             if (!showCorrectionForm) {
                 OutlinedButton(
                     onClick = { showCorrectionForm = true },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PairingTokens.TextSecondary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurfaceVariantDark),
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -175,7 +175,7 @@ private fun IdentifiedContent(
 
             Button(
                 onClick = { onContinue(state.matchedProfileId) },
-                colors = ButtonDefaults.buttonColors(containerColor = PairingTokens.Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = NetHalAccent),
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -195,22 +195,22 @@ private fun CorrectionForm(
     var firmware by remember { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(text = "Corrigir identificação", color = PairingTokens.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(text = "Corrigir identificação", color = OnBackgroundDark, fontSize = 15.sp, fontWeight = FontWeight.Bold)
 
         Text(
             text = "Equipamentos reconhecidos pelo catálogo atual: " +
                 KNOWN_PROFILE_SUGGESTIONS.joinToString(", ") { "${it.vendor} ${it.model}" },
-            color = PairingTokens.TextTertiary,
+            color = OnSurfaceTertiaryDark,
             fontSize = 11.sp,
         )
 
         val fieldColors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = PairingTokens.TextPrimary,
-            unfocusedTextColor = PairingTokens.TextPrimary,
-            focusedBorderColor = PairingTokens.Accent,
-            unfocusedBorderColor = PairingTokens.Border,
-            focusedContainerColor = PairingTokens.Surface,
-            unfocusedContainerColor = PairingTokens.Surface,
+            focusedTextColor = OnBackgroundDark,
+            unfocusedTextColor = OnBackgroundDark,
+            focusedBorderColor = NetHalAccent,
+            unfocusedBorderColor = BorderDark,
+            focusedContainerColor = SurfaceDark,
+            unfocusedContainerColor = SurfaceDark,
         )
 
         OutlinedTextField(
@@ -241,14 +241,14 @@ private fun CorrectionForm(
         Text(
             text = "Sua correção fica registrada apenas neste aparelho como candidata — " +
                 "não promove automaticamente nenhum driver para uso estável.",
-            color = PairingTokens.TextTertiary,
+            color = OnSurfaceTertiaryDark,
             fontSize = 11.sp,
         )
 
         Button(
             onClick = { onSubmit(vendor, model, firmware.ifBlank { null }) },
             enabled = vendor.isNotBlank() && model.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = PairingTokens.Accent),
+            colors = ButtonDefaults.buttonColors(containerColor = NetHalAccent),
             shape = RoundedCornerShape(18.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -258,7 +258,7 @@ private fun CorrectionForm(
         if (correctionSubmitted) {
             Text(
                 text = "Correção salva localmente.",
-                color = PairingTokens.Success,
+                color = SuccessDark,
                 fontSize = 12.sp,
             )
         }

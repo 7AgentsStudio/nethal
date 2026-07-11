@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.manualentry
 
+import com.nethal.core.designsystem.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nethal.feature.pairingdiscovery.internal.BackButton
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 
 /**
  * Destino de entrada manual de IP (issue #80, decisão registrada na spec). Alcançado por dois
@@ -38,11 +38,11 @@ fun ManualIpEntryScreen(
 ) {
     var manualIp by remember { mutableStateOf("") }
 
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -51,7 +51,7 @@ fun ManualIpEntryScreen(
                 BackButton(onClick = onBack)
                 Text(
                     text = "Informar IP manualmente",
-                    color = PairingTokens.TextPrimary,
+                    color = OnBackgroundDark,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 10.dp),
@@ -65,7 +65,7 @@ fun ManualIpEntryScreen(
                     "Informe o IP do equipamento na sua rede local — o NetHAL tenta identificá-lo " +
                         "automaticamente a partir do endereço."
                 },
-                color = PairingTokens.TextSecondary,
+                color = OnSurfaceVariantDark,
                 fontSize = 13.sp,
             )
 

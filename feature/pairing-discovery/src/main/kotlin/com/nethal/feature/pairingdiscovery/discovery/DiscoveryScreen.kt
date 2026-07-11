@@ -1,5 +1,6 @@
 package com.nethal.feature.pairingdiscovery.discovery
 
+import com.nethal.core.designsystem.theme.*
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -35,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.nethal.core.model.NetworkTarget
-import com.nethal.feature.pairingdiscovery.internal.PairingTokens
 import com.nethal.feature.pairingdiscovery.internal.RouterGlyph
 
 /**
@@ -110,11 +110,11 @@ fun DiscoveryScreen(
 // `LaunchedEffect` de forma determinística em todos os emuladores) — ver `ScanningContentTest`.
 @Composable
 internal fun ScanningContent(onSelectManually: () -> Unit) {
-    Scaffold(containerColor = PairingTokens.BackgroundPrincipal) { padding ->
+    Scaffold(containerColor = BackgroundDark) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PairingTokens.BackgroundPrincipal)
+                .background(BackgroundDark)
                 .padding(padding)
                 .padding(horizontal = 26.dp, vertical = 28.dp),
         ) {
@@ -126,14 +126,14 @@ internal fun ScanningContent(onSelectManually: () -> Unit) {
                 RadarIndicator()
                 Text(
                     text = "Procurando seu roteador…",
-                    color = PairingTokens.TextPrimary,
+                    color = OnBackgroundDark,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp),
                 )
                 Text(
                     text = "Certifique-se de que o roteador está ligado e você está na mesma rede Wi-Fi.",
-                    color = PairingTokens.TextSecondary,
+                    color = OnSurfaceVariantDark,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 10.dp),
                 )
@@ -141,7 +141,7 @@ internal fun ScanningContent(onSelectManually: () -> Unit) {
             TextButton(onClick = onSelectManually, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Não encontrou? Selecionar manualmente",
-                    color = PairingTokens.Accent,
+                    color = NetHalAccent,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
                 )
@@ -167,19 +167,19 @@ private fun RadarIndicator() {
         Box(
             modifier = Modifier
                 .size(140.dp)
-                .border(width = 1.dp, color = PairingTokens.Border, shape = CircleShape),
+                .border(width = 1.dp, color = BorderDark, shape = CircleShape),
         )
         Box(
             modifier = Modifier
                 .size(96.dp)
-                .border(width = 1.dp, color = PairingTokens.Border, shape = CircleShape),
+                .border(width = 1.dp, color = BorderDark, shape = CircleShape),
         )
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .background(color = PairingTokens.Accent.copy(alpha = 0.14f * pulse), shape = CircleShape)
-                .border(width = 1.5.dp, color = PairingTokens.Accent.copy(alpha = pulse), shape = CircleShape),
+                .background(color = NetHalAccent.copy(alpha = 0.14f * pulse), shape = CircleShape)
+                .border(width = 1.5.dp, color = NetHalAccent.copy(alpha = pulse), shape = CircleShape),
         )
-        RouterGlyph(tint = PairingTokens.Accent, size = 26.dp)
+        RouterGlyph(tint = NetHalAccent, size = 26.dp)
     }
 }
