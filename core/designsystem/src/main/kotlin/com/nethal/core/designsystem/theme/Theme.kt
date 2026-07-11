@@ -6,8 +6,8 @@ import androidx.compose.runtime.Composable
 
 // Design brief exige dark theme by default; sem toggle de tema claro nesta entrega.
 private val DarkColors = darkColorScheme(
-    primary = NetHalCyan,
-    secondary = NetHalTeal,
+    primary = NetHalAccent,
+    secondary = NetHalAccent,
     background = BackgroundDark,
     surface = SurfaceDark,
     surfaceVariant = SurfaceVariantDark,
