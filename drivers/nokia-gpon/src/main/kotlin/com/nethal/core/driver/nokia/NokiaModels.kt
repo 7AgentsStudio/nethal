@@ -77,7 +77,15 @@ data class NokiaPppStatus(
     val lastConnectionError: String,
 )
 
-/** Identificação do equipamento, lida de `/device_status.cgi`. */
+/**
+ * Identificação do equipamento, lida de `/device_status.cgi`.
+ *
+ * [manufacturer] é o campo bruto `Manufacturer` do firmware — no equipamento real ele vem "ALCL"
+ * (herança Alcatel-Lucent), não "Nokia". Quem mapeia para o vocabulário público de capabilities
+ * (`NokiaGponDriverFamily.capabilityResultFor`) hardcoda `vendor = "Nokia"` em vez de usar este
+ * campo direto — mantido aqui como dado bruto para diagnóstico (`nokiaManualCheck`), não como fonte
+ * de verdade de marca.
+ */
 data class NokiaDeviceInfo(
     val model: String,
     val manufacturer: String,

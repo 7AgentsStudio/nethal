@@ -83,8 +83,10 @@ class NokiaGponRegistryIntegrationTest {
                 ),
             ),
             authenticatedPages = mapOf(
+                // Manufacturer="ALCL" (valor real do firmware, não "Nokia") — ver comentário em
+                // NokiaGponDriverFamily.capabilityResultFor(READ_DEVICE_INFO).
                 "/device_status.cgi" to
-                    """{"ModelName":"G-1425G-B","Manufacturer":"Nokia","SerialNumber":"ALCLXXXXXXXX","SoftwareVersion":"v1","HardwareVersion":"1.0","UpTime":100}""",
+                    """{"ModelName":"G-1425G-B","Manufacturer":"ALCL","SerialNumber":"ALCLXXXXXXXX","SoftwareVersion":"v1","HardwareVersion":"1.0","UpTime":100}""",
             ),
         )
 

@@ -55,7 +55,11 @@ class NokiaGponDriverFamilyTest {
         "/show_wan_status.cgi?ipv4" to """
             var wan_conns = {ConnectionStatus:'Connected',ExternalIPAddress:'203.0.113.10',RemoteIPAddress:'198.51.100.1',DNSServers:'8.8.8.8,8.8.4.4',Uptime:60,ConnectionType:'IP_Routed'};
         """.trimIndent(),
-        "/device_status.cgi" to """{"ModelName":"G-1425G-B","Manufacturer":"Nokia","SerialNumber":"ALCLXXXXXXXX","SoftwareVersion":"v1","HardwareVersion":"1.0","UpTime":100}""",
+        // Manufacturer real do firmware é "ALCL" (Alcatel-Lucent), não "Nokia" — ver comentário em
+        // NokiaGponDriverFamily.capabilityResultFor(READ_DEVICE_INFO). Fixture usa o valor real de
+        // propósito, para provar que o hardcode de vendor="Nokia" funciona mesmo com o campo bruto
+        // divergente, não porque a fixture "deu sorte" de já vir "Nokia".
+        "/device_status.cgi" to """{"ModelName":"G-1425G-B","Manufacturer":"ALCL","SerialNumber":"ALCLXXXXXXXX","SoftwareVersion":"v1","HardwareVersion":"1.0","UpTime":100}""",
         "/lan_status.cgi?wlan" to sampleHomeNetworkingHtml(),
         "/lan_status.cgi?lan" to """
             var lan_ether = [
@@ -171,6 +175,8 @@ class NokiaGponDriverFamilyTest {
         assertTrue(result is CapabilityReadResult.Success)
         val payload = (result as CapabilityReadResult.Success).payload as CapabilityPayload.DeviceInfo
         assertEquals("G-1425G-B", payload.info.model)
+        // "Nokia" mesmo com fixture trazendo Manufacturer="ALCL" (valor real do firmware) — prova o
+        // hardcode, não uma passagem direta do campo bruto.
         assertEquals("Nokia", payload.info.vendor)
         assertEquals(PiiHashing.sha256Hex("ALCLXXXXXXXX"), payload.info.serialNumberHash)
         assertTrue(payload.info.serialNumberHash != "ALCLXXXXXXXX")
