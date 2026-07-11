@@ -17,4 +17,12 @@ sealed interface CapabilityPayload {
     data class Lan(val status: LanStatus) : CapabilityPayload
     data class Wan(val status: WanStatus) : CapabilityPayload
     data class ConnectedClients(val clients: ConnectedClientList) : CapabilityPayload
+
+    /**
+     * Payload de `READ_DEVICE_INFO` — adicionado ao ligar o primeiro parser estruturado real desta
+     * capability (`TpLinkLegacyCgiDriverFamily`, issue #19). Campo tipado `com.nethal.core.model.DeviceInfo`
+     * (fully-qualified aqui só porque o nome do case colide com o nome do tipo, mesmo problema que não
+     * existe nos outros cases).
+     */
+    data class DeviceInfo(val info: com.nethal.core.model.DeviceInfo) : CapabilityPayload
 }
