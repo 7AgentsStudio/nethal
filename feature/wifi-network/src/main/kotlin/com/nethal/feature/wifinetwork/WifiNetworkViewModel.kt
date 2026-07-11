@@ -122,11 +122,10 @@ private fun CapabilityReadResult.toActionUiModel(id: CapabilityId): WifiNetworkA
     }
     val reason = when (this) {
         is CapabilityReadResult.Success -> when (capability.state) {
-            CapabilityState.AVAILABLE -> "O equipamento conectado declara suporte a esta ação, mas o " +
-                "NetHAL Core ainda não implementa a execução de escrita (Command Executor) — leitura " +
-                "confirmada, ação em desenvolvimento."
+            CapabilityState.AVAILABLE -> "Esta ação não está disponível nesta versão do app. " +
+                "Compatibilidade confirmada com seu equipamento."
             else -> capability.reason
-                ?: "Capability listada como \"${capability.state.name.lowercase()}\" pelo driver conectado."
+                ?: "O equipamento não suporta esta ação ou o driver ainda não tem acesso a ela."
         }
         is CapabilityReadResult.Unavailable -> reason
         is CapabilityReadResult.Failure -> "Falha ao consultar esta ação no equipamento: $reason"
