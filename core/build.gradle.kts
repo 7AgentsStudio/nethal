@@ -13,6 +13,11 @@ dependencies {
     api(project(":core:model"))
     api(project(":core:protocol"))
     api(project(":core:catalog"))
+    api(project(":core:discovery"))
+    api(project(":core:fingerprint"))
+    api(project(":core:capability"))
+    api(project(":core:auth"))
+    api(project(":core:consent"))
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
