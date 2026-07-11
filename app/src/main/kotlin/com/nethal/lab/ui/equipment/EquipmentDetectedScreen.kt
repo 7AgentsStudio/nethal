@@ -34,7 +34,7 @@ import java.util.Locale
  * baixa (`LOW_CONFIDENCE_THRESHOLD`).
  */
 @Composable
-fun EquipmentDetectedScreen(viewModel: EquipmentDetectedViewModel, onContinue: () -> Unit) {
+fun EquipmentDetectedScreen(viewModel: EquipmentDetectedViewModel, onContinue: (matchedProfileId: String?) -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
 
     when (val state = uiState) {
@@ -70,7 +70,7 @@ private fun IdentifyingContent() {
 private fun IdentifiedContent(
     state: EquipmentDetectedUiState.Identified,
     onSubmitCorrection: (String, String, String?) -> Unit,
-    onContinue: () -> Unit,
+    onContinue: (matchedProfileId: String?) -> Unit,
 ) {
     var showCorrectionForm by remember { mutableStateOf(state.isLowConfidence) }
 
@@ -144,10 +144,8 @@ private fun IdentifiedContent(
                 )
             }
 
-            // Tela 4 (capabilities detectadas, spec §11) ainda não existe — "Continuar" leva a
-            // Configurações só para o fluxo ter um destino navegável nesta entrega.
-            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
-                Text("Continuar (Configurações)")
+            Button(onClick = { onContinue(state.matchedProfileId) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Continuar")
             }
         }
     }

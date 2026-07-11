@@ -45,6 +45,7 @@ class EquipmentDetectedViewModel(
                 manifestGeneratedAt = result.manifestGeneratedAt,
                 isLowConfidence = result.confidence < LOW_CONFIDENCE_THRESHOLD,
                 correctionSubmitted = false,
+                matchedProfileId = result.matchedProfileId,
             )
         }
     }

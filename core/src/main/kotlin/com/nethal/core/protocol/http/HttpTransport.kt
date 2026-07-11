@@ -7,6 +7,11 @@ import java.net.URL
 private const val DEFAULT_USER_AGENT =
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+/** Nomes de atributo de cookie (RFC 6265), nunca o nome de um cookie de verdade — usado por [DefaultHttpTransport.parseCookies]. */
+private val COOKIE_ATTRIBUTE_NAMES = setOf(
+    "path", "domain", "expires", "max-age", "secure", "httponly", "samesite",
+)
+
 /** Resposta HTTP crua, comum a qualquer Driver Family que fale HTTP (ver `docs/architecture/hal-layering-model.md` §5.5). */
 data class HttpTransportResponse(
     val statusCode: Int,
@@ -165,13 +170,36 @@ class DefaultHttpTransport(private val config: HttpTransportConfig) : HttpTransp
         }
     }
 
+    /**
+     * Alguns firmwares (confirmado no Nokia G-1425G-B em probe real: `/device_status.cgi` sem
+     * sessão respondeu `Set-Cookie: sid=deleted; lsid=deleted; expires=...; path=/;`) empacotam
+     * VÁRIOS cookies num único header `Set-Cookie`, em vez de um header por cookie (o padrão RFC
+     * 6265). A versão anterior deste parser só olhava o primeiro par `nome=valor` de cada header —
+     * cookies além do primeiro (ex.: `lsid` quando `sid` vem antes no mesmo header) eram
+     * descartados silenciosamente. Isso quebrava sessões que dependem de mais de um cookie: o
+     * cliente reenviava só `sid`, e o firmware rejeitava a leitura autenticada como se não houvesse
+     * sessão nenhuma — mesmo o login tendo "funcionado" (retornou `sid` via header `X-SID`).
+     */
     private fun parseCookies(connection: HttpURLConnection): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        connection.headerFields["Set-Cookie"]?.forEach { cookie ->
-            val firstPart = cookie.split(";").first().trim()
-            val eqIndex = firstPart.indexOf('=')
-            if (eqIndex > 0) {
-                result[firstPart.substring(0, eqIndex).trim()] = firstPart.substring(eqIndex + 1).trim()
+        // Nomes de header HTTP são case-insensitive (RFC 7230) — usar a chave exata "Set-Cookie" no
+        // Map de connection.headerFields já foi flagrado quebrando contra pelo menos um servidor de
+        // teste local que devolve o header com case diferente; busca case-insensitive é a forma
+        // correta de qualquer forma, não só um workaround de teste.
+        val setCookieValues = connection.headerFields.entries
+            .firstOrNull { (key, _) -> key?.equals("Set-Cookie", ignoreCase = true) == true }
+            ?.value
+            .orEmpty()
+        setCookieValues.forEach { headerValue ->
+            headerValue.split(";").forEach { segment ->
+                val trimmed = segment.trim()
+                val eqIndex = trimmed.indexOf('=')
+                if (eqIndex > 0) {
+                    val name = trimmed.substring(0, eqIndex).trim()
+                    if (name.lowercase() !in COOKIE_ATTRIBUTE_NAMES) {
+                        result[name] = trimmed.substring(eqIndex + 1).trim()
+                    }
+                }
             }
         }
         return result

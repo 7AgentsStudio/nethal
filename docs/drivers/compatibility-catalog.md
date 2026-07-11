@@ -212,12 +212,14 @@ Mitigação já implementada: `TpLinkStokLuciDriverFamily` recusa construir cont
 não seja IP privado (RFC 1918) — mesma guarda `PrivateIpRanges` usada por todos os drivers. Isso
 reduz o risco a "host malicioso dentro da própria LAN do usuário", não elimina o TOFU em si.
 
-**Pendência antes de `READ_ONLY_BETA`**: mesma pendência do Nokia — a Tela 5 (Autenticação) precisa
-avisar explicitamente o usuário sobre essa limitação antes do primeiro login neste profile também.
-Não é bloqueante para o driver continuar em `DISCOVERY_ONLY`.
+**Pendência antes de `READ_ONLY_BETA` — RESOLVIDA (2026-07-08, ver Changelog acima):** a Tela 5
+(Autenticação) foi implementada com o aviso explícito de TOFU, específico deste profile
+(`AuthenticationUiState.Ready.showTofuWarning`), revisada e aprovada por Marisa sem correção
+obrigatória. Não era bloqueante para o driver continuar em `DISCOVERY_ONLY`/`READ_ONLY_ALPHA`; era
+a única pendência registrada para a promoção a `READ_ONLY_BETA`, decidida nesta mesma data.
 
 Revisão de segurança: Marisa, 2026-07-07 (implementação do `TpLinkStokLuciDriverFamily`), aprovado
-com esta ressalva documentada.
+com esta ressalva documentada — ressalva fechada em 2026-07-08.
 
 ## Nota de mapeamento — `manufacturer` real (`ALCL`) vs. nome comercial (`Nokia`)
 
@@ -326,6 +328,354 @@ Revisão de segurança: Marisa, 2026-07-07 (passo 4 do plano de refatoração HA
 C20 como `TpLinkLegacyCgiDriverFamily`), aprovado com esta ressalva documentada.
 
 ## Changelog
+
+- **2026-07-09 (Diego — verificação da hipótese "HTTP 299 tratado como não-sucesso" a partir do
+  `NOKIA_GPON_FIELD_MAP.md` do SignallQ: não confirmada, nenhum bug adicional; corrobora o fix
+  anterior; `stage` mantido, sem decisão de promoção)** — Luiz trouxe um levantamento irmão feito no
+  SignallQ (`docs_ai/technical/NOKIA_GPON_FIELD_MAP.md`, replicação em Node.js do mesmo handshake
+  RSA+AES contra a mesma família Nokia G-14xxG/ALCL), que documenta: sucesso de `/login.cgi` é HTTP
+  **299**, não 200, com `X-SID` + cookies `sid`/`lsid`. Hipótese levantada: se alguma checagem de
+  sucesso no código estivesse restrita a `200`, isso explicaria a sessão nunca sendo aceita mesmo
+  depois da correção de `parseCookies` da entrada anterior.
+
+  **Verificado, sem tocar o equipamento real:**
+  1. `NokiaAuthenticationClient.login` já checava `response.statusCode == 299 || response.statusCode
+     == 200` desde a implementação original — não havia branch restrito a 200 aqui.
+  2. Adicionado 5º teste em `DefaultHttpTransportTest.kt`: servidor HTTP local responde `299` com
+     `X-SID` e `Set-Cookie` num `POST` (mesmo formato de `/login.cgi`) — confirma que
+     `HttpURLConnection`/`DefaultHttpTransport.post` reportam `statusCode=299` corretamente e
+     capturam headers/cookies sem exceção nem truncamento. **Hipótese não confirmada como causa
+     adicional** — a camada de transporte já lida bem com esse código não-padrão.
+  3. Conferida a codificação `base64_custom_escape` (`+`→`-`, `/`→`_`, `=`→`.`) do parâmetro `ck`,
+     citada pelo doc do SignallQ: `NokiaAuthCrypto.base64UrlEscape` já implementa exatamente essa
+     troca de caracteres. Sem divergência.
+  4. O mesmo doc (item 5 da seção de autenticação) descreve que leituras GET pós-login dependem dos
+     cookies `lang`/`sid`/`lsid` — **corrobora, de fonte independente**, a correção de
+     `parseCookies` já registrada na entrada anterior deste changelog (não é uma correção nova, é
+     confirmação externa da mesma causa raiz).
+
+  Suíte `:core:test` reconfirmada verde (202 testes, 0 falhas) depois do teste novo. Novo manifesto
+  `catalog-2026.07.24.json` (`previousManifest: catalog-2026.07.23.json`) com nova entrada em
+  `knownFirmwareBugs[]` do profile `nokia_g1425gb_v1` registrando esta verificação.
+
+  **Sem decisão de estágio, de novo:** `stage`/`capabilities[]`/`confidenceScoreOverall` continuam
+  inalterados — nada nesta rodada muda o que já estava pendente de confirmação: a correção de
+  `parseCookies` da entrada anterior segue não validada contra o hardware físico. Próximo passo
+  continua o mesmo: Luiz rodar o `nokiaManualCheck` (já com a correção) contra 192.168.1.254 mais uma
+  vez.
+
+  **Pendência de dados (Diego → Bruno, mesmo padrão de sempre):** `loadEmbeddedCatalogResource`
+  aponta para `catalog/catalog-2026.07.23.json` no momento desta entrada — Bruno bumpar para
+  `catalog/catalog-2026.07.24.json` (e as asserções de `manifestVersion` em
+  `DriverRegistryTest`/`FingerprintEngineTest`) quando puder.
+
+- **2026-07-08 (Diego — causa raiz da falha de leitura do `nokia_g1425gb_v1` encontrada e
+  corrigida: bug real de código em `DefaultHttpTransport.parseCookies`, não firmware; `stage`
+  mantido, sem decisão de promoção)** — Luiz rodou o `nokiaManualCheck` de novo (senha não passou
+  pelo Diego em nenhum momento), agora já com o logging bruto adicionado na entrada anterior deste
+  changelog. Resultado: login reporta sucesso, fingerprint pós-login reconfirma `nokia_g1425gb_v1`
+  de novo, mas os 4 endpoints de leitura (GPON, WAN, Device Info, Clientes) devolveram o **mesmo**
+  corpo de erro de 113 chars — `<script>var Errorinfo ="Bad request for invalid parameter in the
+  coookie.";window.location.replace('/');</script>` — já documentado na entrada anterior como a
+  resposta que `/device_status.cgi` dá quando sondado **sem sessão nenhuma**. PPP devolveu corpo
+  vazio (0 chars). Ou seja: o servidor tratava as chamadas pós-login como não-autenticadas, apesar
+  do login em si "funcionar" (retornar `sid` via `X-SID`).
+
+  **Investigação (sem tocar o equipamento real):** lido `NokiaAuthenticationClient.
+  authenticatedHeaders`/`fetchAuthenticated` e o transporte HTTP compartilhado
+  `core/src/main/kotlin/com/nethal/core/protocol/http/HttpTransport.kt`
+  (`DefaultHttpTransport.parseCookies`). Achados dois defeitos reais nessa função — **bug de código
+  do NetHAL, não variante/bug de firmware**:
+  1. O parser só lia o primeiro par `nome=valor` de cada header `Set-Cookie`. O firmware Nokia
+     empacota vários cookies num único header (`Set-Cookie: sid=...; lsid=...; lang=...; path=/` —
+     mesmo padrão já visto no probe passivo anterior de `/device_status.cgi` sem sessão, que devolveu
+     `sid=deleted; lsid=deleted; expires=...; path=/;` numa linha só). `lsid` (e qualquer cookie além
+     do primeiro) era descartado silenciosamente e nunca reenviado nas leituras autenticadas — o
+     equipamento aparentemente exige `lsid` junto de `sid` para aceitar a sessão como válida.
+  2. A busca do header usava a chave exata `"Set-Cookie"` no `Map` de
+     `HttpURLConnection.headerFields`, sensível a maiúsculas/minúsculas — nomes de header HTTP são
+     case-insensitive por RFC 7230. Essa busca exata já quebrou contra pelo menos um servidor HTTP
+     real usado nos testes novos (não o Nokia — um servidor local de teste), então é um risco
+     genérico, não hipotético.
+
+  **Correção:** os dois defeitos corrigidos na mesma função (`core/src/main/kotlin/com/nethal/core/
+  protocol/http/HttpTransport.kt`). Como pedido, nada foi testado em loop contra o equipamento real
+  — a reprodução e a correção foram validadas com um servidor HTTP local determinístico
+  (`com.sun.net.httpserver.HttpServer`, JDK padrão, sem dependência nova), num teste novo
+  (`core/src/test/kotlin/com/nethal/core/protocol/http/DefaultHttpTransportTest.kt`, 4 casos):
+  1. Reproduz literalmente o padrão do firmware Nokia (`Set-Cookie` combinado com `sid`+`lsid`+`lang`)
+     e confirma que todos os cookies são capturados, não só o primeiro.
+  2. Confirma que o caso padrão RFC 6265 (um `Set-Cookie` por cookie) continua funcionando — sem
+     regressão para os demais drivers (TP-Link também usa `DefaultHttpTransport`).
+  3. Reproduz o header exato `sid=deleted; lsid=deleted; expires=...; path=/;` já capturado ao vivo
+     do Nokia G-1425G-B (probe sem sessão), confirmando que os atributos de cookie (`expires`,
+     `path`) nunca viram entrada do mapa de cookies.
+  4. Confirma que um header `Cookie` explícito passado em `extraHeaders` (como
+     `NokiaAuthenticationClient.authenticatedHeaders` monta) realmente chega ao servidor — descarta a
+     hipótese 2 do coordinator (client HTTP diferente/sem propagação do header) como causa adicional.
+
+  Suíte completa `:core:test` reconfirmada verde (201 testes, 0 falhas) depois da correção;
+  `:core:compileKotlin`/`:core:compileTestKotlin` também. Novo manifesto `catalog-2026.07.23.json`
+  (`previousManifest: catalog-2026.07.22.json`) com nova entrada em `knownFirmwareBugs[]` do profile
+  `nokia_g1425gb_v1` registrando a correção e deixando claro que **não é bug de firmware** — é bug de
+  código do NetHAL num componente compartilhado (`DefaultHttpTransport`, usado também pelo TP-Link).
+
+  **Decisão explícita: NÃO promovi `stage` (mantido `READ_ONLY_ALPHA`), NÃO restaurei
+  `capabilities[]`/`confidenceScoreOverall` para o estado anterior à falha.** A correção foi validada
+  só contra servidor local determinístico, nunca contra o equipamento físico — restaurar
+  `capabilities[]: AVAILABLE`/`confidenceScoreOverall: 0.9` sem essa confirmação seria inventar
+  evidência que este catálogo proíbe explicitamente. `stageReason` do profile atualizado para
+  registrar a correção e a pendência de confirmação real.
+
+  **Próximo passo:** Luiz rodar o `nokiaManualCheck` (já com a correção) mais uma vez contra
+  192.168.1.254. Se os 5 endpoints agora retornarem dado real, é confirmação de fix normal de driver
+  que já estava em `READ_ONLY_ALPHA` — Diego atualiza `capabilities[]`/`confidenceScoreOverall` no
+  manifesto seguinte sem precisar de decisão do Rafael (mesmo padrão de "reconfirmação" já usado
+  nas rodadas anteriores). Se a leitura continuar falhando por outro motivo, ou se o corpo de erro
+  mudar, é sinal de que a causa raiz não era só isto (ou não era só isto) — aí sim escalo para
+  Rafael com o achado, sem decidir promoção sozinho.
+
+  **Pendência de dados (Diego → Bruno, mesmo padrão de sempre):** `loadEmbeddedCatalogResource`
+  ainda aponta para `catalog/catalog-2026.07.22.json` — Bruno bumpar para
+  `catalog/catalog-2026.07.23.json` (e as asserções de `manifestVersion` em
+  `DriverRegistryTest`/`FingerprintEngineTest`) quando puder; deixado assim de propósito, mesmo
+  split de responsabilidade de sempre.
+
+- **2026-07-08 (Diego — terceira execução real do `nokiaManualCheck` contra `nokia_g1425gb_v1`
+  em 192.168.1.254: login confirmado, leitura falhou; `stage` mantido, sem decisão de promoção)** —
+  O Luiz forneceu credencial (usuário `admin`) fora de banda e rodou
+  `gradlew :core:nokiaManualCheck --args="192.168.1.254 admin"` ele mesmo, senha via prompt
+  interativo (fallback `readlnOrNull()`, pois rodou via Gradle Daemon sem console — aviso do próprio
+  runner). Diego não teve acesso à senha nem a qualquer token de sessão em nenhum momento; a
+  autenticação foi executada e relatada pelo Luiz/coordenação, nunca por chamada de ferramenta deste
+  agente (regra inegociável do projeto: senha nunca em argumento de linha de comando, nunca digitada
+  numa sessão de agente de IA — ver KDoc de `ManualCheckRunner.readPasswordInteractively`).
+
+  **Resultado:**
+  1. Handshake RSA+AES fechou normalmente (login sem erro, sessão aberta via `X-SID`/`sid`).
+  2. Fingerprint pós-login (título HTML, header `Server`) reconfirmou exatamente os valores já
+     registrados para `nokia_g1425gb_v1` ("GPON Home Gateway", `Server` ausente) — não é evidência
+     de unidade física diferente, é o mesmo host já listado em `managementDefaults.candidateIps`
+     (192.168.1.254 já era o primeiro candidato do profile antes desta rodada). **Sem necessidade de
+     profile irmão** — confirmação registrada nos `note` de `fingerprintEvidence[]` (`html_title`,
+     `http_headers`) do manifesto `catalog-2026.07.22.json`.
+  3. Os 5 endpoints de leitura (`/device_status.cgi`, `/wan_status.cgi?gpon`,
+     `/show_wan_status.cgi?ipv4`, `/index.cgi?getppp`, `/lan_status.cgi?wlan`) retornaram corpo que
+     `NokiaResponseParser` não conseguiu interpretar — todos os campos vieram em branco/zerados (não
+     "sem sinal", valores default do data class). Isso **contradiz** o histórico de duas execuções
+     anteriores bem-sucedidas que sustentam `capabilities[]: AVAILABLE` e
+     `confidenceScoreOverall: 0.9` deste profile. Causa raiz não confirmada (variante de firmware,
+     sessão/cookie rejeitados apesar do login "ter sucedido", ou efeito do fallback de senha
+     não-interativo) — documentado como novo item de `knownFirmwareBugs[]` no manifesto
+     `catalog-2026.07.22.json`, `confidence: 0.3` (baixa, exatamente por não estar confirmado).
+
+  **Ação de código (Diego):** `core/src/main/kotlin/com/nethal/core/tooling/ManualCheckRunner.kt`,
+  `runNokia()` reescrito para não depender mais de `NokiaOntDriver.readSnapshot()` (que só expõe o
+  snapshot já parseado) — agora usa `NokiaAuthenticationClient` diretamente, login único, e imprime
+  o corpo bruto de cada um dos 5 endpoints lado a lado com o resultado de
+  `NokiaResponseParser`, para o próximo teste real já trazer o dado que falta para diagnosticar a
+  causa (nunca imprime senha nem `sid`/`X-SID`). Guarda `PrivateIpRanges.isPrivate(ip)` preservada
+  (antes vinha do `init` de `NokiaOntDriver`, que deixou de ser usado neste runner). Compilação
+  (`:core:compileKotlin`) e suíte de testes (`:core:test`) verificadas.
+
+  **Decisão explícita: NÃO promovi nem rebaixei `stage` (`READ_ONLY_ALPHA` mantido), não toquei
+  `capabilities[]` nem `confidenceScoreOverall`.** A causa da falha de leitura ainda não está
+  confirmada — pode ser bug de parser (ajuste técnico normal, sem precisar de decisão do Rafael) ou
+  variante de firmware que justificaria um profile novo (que sim precisa de decisão do Rafael antes
+  de existir) — não há evidência suficiente ainda para saber qual dos dois é. `stageReason` do
+  profile foi atualizado só para registrar que houve nova execução real e que a contradição está em
+  aberto, não para anunciar uma conclusão.
+
+  **Próximo passo:** Luiz rodar o `nokiaManualCheck` atualizado novamente, de preferência num shell
+  próprio com console interativo (não IDE/Gradle Daemon), e compartilhar os corpos brutos dos 5
+  endpoints já mascarados (SSID, MAC completo, IP público, serial — mesma regra da spec §8.9) para
+  Diego comparar contra os campos que `NokiaResponseParser` espera e decidir se é correção de
+  parser ou variante de firmware.
+
+  **Pendência de dados (Diego → Bruno, mesmo padrão já usado nas rodadas anteriores de bump de
+  manifesto) — RESOLVIDA:** `loadEmbeddedCatalogResource` (default agora
+  `catalog/catalog-2026.07.22.json`, `core/src/main/kotlin/com/nethal/core/catalog/DriverRegistry.kt`)
+  e as asserções de `manifestVersion` em `DriverRegistryTest`/`FingerprintEngineTest` foram
+  atualizadas por Bruno para o novo manifesto; `:core:test` está verde de novo.
+
+- **2026-07-08 (decisão do Rafael: `tplink_archer_c6_stok_v1` PROMOVIDO para
+  `READ_ONLY_BETA`)** — Reavaliação da pendência registrada na entrada `2026-07-09` abaixo (nota:
+  aquela entrada foi escrita antes desta, apesar da data nominal posterior — é o registro histórico
+  da decisão de não promover, mantido como está). Conferi o working tree real (não só os resumos de
+  revisão), especificamente:
+
+  1. **Aviso de TOFU na Tela 5 — confirmado presente e correto.**
+     `app/src/main/kotlin/com/nethal/lab/ui/authentication/AuthenticationScreen.kt`
+     (`ReadyContent`, condicionado a `state.showTofuWarning`) exibe o aviso em destaque
+     (`MaterialTheme.colorScheme.error`) descrevendo busca de chave sem certificado, impossibilidade
+     de confirmar a autenticidade do host de antemão, e recomendação de uso restrito à rede local
+     confiável — fiel ao risco real descrito na seção "Limitação conhecida — TOFU no handshake
+     stok/luci do TP-Link Archer C6" acima, só com wording simplificado ("sua própria chave de
+     criptografia", singular, em vez de "duas chaves RSA distintas") — divergência de literalidade
+     técnica já sinalizada por Marisa, não de conteúdo de risco, e não bloqueante.
+     `AuthenticationUiState.Ready.showTofuWarning` só é `true` para
+     `driverFamilyId == "tplink-stok-luci-driver"` (`AuthenticationViewModel.resolveDriver`),
+     confirmando que o aviso é específico deste profile, não um alerta genérico.
+  2. **Fluxo de navegação força passagem pela Tela 5 antes de qualquer leitura autenticada —
+     confirmado por leitura de código.** `app/src/main/kotlin/com/nethal/lab/ui/navigation/
+     NetHalNavHost.kt`: a única forma de `authenticatedCapabilityEngine` deixar de ser `null` é o
+     callback `onAuthenticated` da rota `AUTHENTICATION` (Tela 5); a rota `CAPABILITIES` (Tela 4)
+     não tem nenhum caminho alternativo de entrada. Isso resolve, por evidência estrutural de
+     código, o item 2 da pendência de `2026-07-09` ("Diego — validar que o fluxo passa pela Tela 5
+     antes de qualquer leitura autenticada") — a validação "ao vivo contra hardware" que a entrada
+     de `2026-07-09` também pedia continua desejável como reforço antes de `STABLE`, mas não é
+     necessária para fechar o critério objetivo de `/ciclo-vida-driver` para `READ_ONLY_BETA`
+     (abaixo), porque o próprio código já torna esse desvio impossível, não apenas improvável.
+  3. **Critério objetivo de `/ciclo-vida-driver` para `READ_ONLY_ALPHA → READ_ONLY_BETA`**
+     ("capabilities de leitura declaradas e revisadas por Marisa quanto a telemetria") — cumprido:
+     Marisa já havia revisado o `CapabilityEngine` quanto a telemetria/credencial (entrada
+     `2026-07-09` abaixo) e revisou de novo, nesta rodada, a Tela 5 completa (credencial nunca
+     logada/persistida em nenhuma classe nova, confirmado por leitura completa do diff — entrada
+     `2026-07-08 revisão de segurança da Marisa` abaixo) e o working tree das Telas 5/4/6 na íntegra
+     (entrada `2026-07-08 revisão cruzada` abaixo, sem correção obrigatória).
+
+  **Decisão: promove.** `stage` passa de `READ_ONLY_ALPHA` para `READ_ONLY_BETA` para o profile
+  `tplink_archer_c6_stok_v1`. A pendência que bloqueava a promoção (entrada `2026-07-09` abaixo,
+  "Tela 5 precisa avisar explicitamente sobre TOFU antes do primeiro login") está satisfeita — a
+  tela existe, o aviso existe, é específico deste profile, e o fluxo de navegação não permite
+  contorná-la. Nenhuma capability de escrita envolvida (fora do escopo desta promoção,
+  `READ_ONLY_BETA → WRITE_BETA` exige sign-off adicional de Marisa via Safety Guard quando/se algum
+  dia houver capability de escrita para este driver).
+
+  **Ação de dados pendente (Diego):** o campo `stage` real deste profile vive no manifesto JSON
+  (`core/src/main/resources/catalog/catalog-2026.07.21.json`, ainda `"READ_ONLY_ALPHA"` na linha do
+  profile) — esta entrada de changelog registra a decisão, mas não edita o JSON (fora da minha
+  alçada, não implemento/edito artefato de dado de produto). Diego: gerar novo manifesto
+  (`catalog-2026.07.22.json`, `previousManifest: "catalog-2026.07.21.json"`) com `stage:
+  "READ_ONLY_BETA"` e `stageReason` citando esta entrada; Bruno: atualizar
+  `loadEmbeddedCatalogResource` (default no momento desta entrada `catalog/catalog-2026.07.21.json`,
+  hoje já `catalog/catalog-2026.07.22.json` — bump seguinte, por outro motivo, ver entrada de
+  2026-07-08 sobre `nokia_g1425gb_v1` no topo deste changelog —
+  `core/src/main/kotlin/com/nethal/core/catalog/DriverRegistry.kt`) e as asserções de
+  `manifestVersion` em `DriverRegistryTest`/`FingerprintEngineTest` para o novo manifesto, mesmo
+  padrão já usado nas rodadas anteriores de bump de manifesto.
+
+  **Débitos não bloqueantes desta promoção, mantidos em aberto (já registrados em entradas
+  anteriores, revisitar antes de `WRITE_BETA`/`STABLE`, não antes):**
+  - Validação ao vivo contra hardware real do fluxo completo (Diego) — reforço desejável, não
+    bloqueante (ver item 2 acima).
+  - Heurística de `SessionExpired` (HTTP 401/403) nunca confirmada contra expiração real de `stok`
+    (Diego).
+  - `CapabilityEngine.closeSession()` não faz logout no servidor — débito técnico sem dono/prazo.
+  - `capabilities[].state` do manifesto vigente desatualizado (`UNKNOWN` em vez de refletir o parser
+    real) — Diego sincronizar no mesmo bump de manifesto acima.
+  - As três ressalvas de produto/UX da revisão cruzada (wording TOFU mais literal, reset de
+    `credentialTestState` ao detectar sessão encerrada, gate de `DriverStage` antes de tentar
+    `authenticate()`) seguem como decisão de produto em aberto, sem prazo — nenhuma altera
+    segurança/telemetria, nenhuma bloqueia este estágio.
+
+- **2026-07-08 (revisão cruzada Marisa/Diego das Telas 5/4/6 — ambos aprovados, sem correção
+  obrigatória)** — Marisa (segurança) e Diego (protocolo/driver) revisaram o working tree completo
+  das Telas 5/4/6 do NetHAL Lab de forma independente. Ambos os pareceres: **Aprovado**, "nenhuma
+  correção de código necessária". Nenhum item exigia mudança de código — só três ressalvas
+  não-bloqueantes, explicitamente descritas por ambos como decisão de produto/UX fora da alçada da
+  revisão, e por isso não corrigidas por conta própria. Cada uma foi documentada em KDoc no ponto
+  exato do código a que se refere, para não ficar só registrada em texto de review:
+  1. **Wording do aviso TOFU** (Marisa) — `AuthenticationScreen.kt` simplifica "duas chaves RSA
+     distintas" (redação técnica desta seção, ver acima) para "sua própria chave de criptografia"
+     (singular). Não distorce o risco, diverge do detalhe técnico. Ver KDoc de `AuthenticationScreen`
+     (`app/src/main/kotlin/com/nethal/lab/ui/authentication/AuthenticationScreen.kt`).
+  2. **UX de voltar da Tela 4 após sessão já encerrada** (Marisa) — voltar da Tela 4 para a Tela 5
+     depois que `CapabilitiesViewModel.closeSession()` já rodou, e clicar "Continuar" de novo,
+     devolve `null` (comportamento honesto, nunca finge sessão viva) e navega para a Tela 4 com
+     "sessão indisponível" — pode intrigar o usuário, mas não é falha de segurança. Ver KDoc de
+     `AuthenticationViewModel.captureAuthenticatedSession`.
+  3. **`resolveDriver()` não verifica `profile.stage`** (Diego) — um profile `DRAFT` (ex.:
+     `tplink_archer_c6_v1`/`legacy-cgi`) chega normalmente a `AuthenticationUiState.Ready`; a falha
+     só aparece depois, ao clicar "Testar" (mensagem honesta do `authenticate()` default). Pergunta
+     em aberto para Rafael: a Tela 5 deveria bloquear/avisar por `DriverStage` antes mesmo de
+     tentar autenticar? Ver KDoc de `AuthenticationViewModel.resolveDriver`.
+
+  Nenhuma das três ressalvas altera `stage` do profile, capability declarada, ou comportamento de
+  segurança/telemetria — todas ficam para Rafael (produto) ou Bruno (implementação, se Rafael
+  decidir) num ciclo futuro. Suíte completa (`:app:test`, `:core:test`,
+  `:app:compileDebugKotlin`) reconfirmada verde após as edições de KDoc (só documentação, sem
+  mudança de comportamento).
+
+- **2026-07-09 (avaliação de promoção do `tplink_archer_c6_stok_v1` para `READ_ONLY_BETA` —
+  decisão do Rafael: NÃO promovido ainda)** — Marisa revisou o `CapabilityEngine` (issue #16,
+  entrada de changelog abaixo) e aprovou sem bloqueio de segurança quanto a telemetria/credencial:
+  nunca logada/persistida, sem cache de sessão entre equipamentos, retentativa única de
+  reautenticação sem risco de força bruta. Isso cumpre a metade do critério objetivo de
+  `/ciclo-vida-driver` para `READ_ONLY_ALPHA → READ_ONLY_BETA` ("capabilities de leitura declaradas
+  e revisadas por Marisa quanto a telemetria") — as quatro capabilities (`READ_WIFI_STATUS`,
+  `READ_LAN_STATUS`, `READ_WAN_STATUS`, `READ_CONNECTED_CLIENTS`) estão declaradas em código e
+  documentadas.
+
+  **Não promove agora.** Este mesmo documento já registrava uma pendência explícita para este
+  profile especificamente antes de `READ_ONLY_BETA` (ver seção "Limitação conhecida — TOFU no
+  handshake stok/luci do TP-Link Archer C6" acima, revisão de segurança de Marisa em 2026-07-07): a
+  Tela 5 (Autenticação, `docs/product/specification.md` §11) precisa avisar explicitamente o
+  usuário sobre o TOFU no handshake RSA (duas chaves buscadas do próprio host, sem certificado nem
+  pinagem) antes do primeiro login neste profile. Conferido nesta rodada: `app/src/main/kotlin/com/
+  nethal/lab/ui/` não tem nenhuma tela de Autenticação implementada ainda (existem apenas Welcome,
+  BetaOptIn, Privacy, Discovery/DiscoveryFailed/MultipleCandidates, EquipmentDetected, Settings) —
+  a pendência continua aberta, não foi endereçada pelo trabalho da issue #16 (que foi só SDK/core,
+  sem UI) nem revisitada pela Marisa nesta rodada (o escopo da revisão dela foi o `CapabilityEngine`
+  em si, não essa pendência de UX já registrada). Promover o profile sem esse aviso na tela real
+  significaria declarar `READ_ONLY_BETA` sem o rastro de evidência que este próprio catálogo exige
+  para o gate — não aceitável.
+
+  **O que falta, e quem:**
+  1. **Bruno** — implementar a Tela 5 (Autenticação) com o aviso de TOFU descrito acima (mais os
+     demais campos já especificados: usuário, senha, botão testar, aviso de senha não salva, aviso
+     de sessão única). Sem isso, este gate não fecha.
+  2. **Diego** — quando a Tela 5 existir, validar ao vivo que o fluxo de login do
+     `tplink_archer_c6_stok_v1` passa por ela antes de qualquer leitura autenticada.
+
+  **Ressalvas adicionais, registradas mas não bloqueantes deste gate (revisitar quando a Tela 5
+  destravar a promoção):**
+  - A heurística de `SessionExpired` (HTTP 401/403 pós-login) nunca foi confirmada contra hardware
+    real — o driver nunca viu um `stok` expirar de verdade. Diego valida quando possível.
+  - `CapabilityEngine.closeSession()` não faz logout no servidor, só descarta a credencial local —
+    sessão do equipamento expira por TTL do firmware. Não explorável hoje (uma instância de engine =
+    uma sessão descartável), mas é débito técnico sem dono/prazo nesta rodada.
+  - O manifesto de catálogo vigente (`catalog-2026.07.19.json`) ainda declara
+    `READ_WIFI_STATUS`/`READ_WAN_STATUS`/`READ_CONNECTED_CLIENTS`/`READ_DEVICE_INFO` do profile
+    `tplink_archer_c6_stok_v1` como `state: "UNKNOWN"`, com `reason` dizendo que "ainda não existe
+    parser estruturado" — desatualizado desde o commit `d0d8582` (o parser existe e o Capability
+    Engine já lê dado real para as quatro capabilities citadas acima). Diego: sincronizar
+    `capabilities[].state` num novo manifesto antes que algum consumidor trate o catálogo como fonte
+    de verdade e esconda funcionalidade que já funciona.
+  - Débito de arquitetura já registrado em `docs/architecture/hal-layering-model.md` §8 (atualização
+    2026-07-08): `CapabilityEngine` ainda não consulta `profile.capabilities[]` do catálogo para
+    declarar estado inicial por capability. Não bloqueia este gate especificamente, mas é a raiz da
+    ressalva anterior — Bruno mantém prioridade para o próximo ciclo de SDK.
+
+- **2026-07-08 (revisão de segurança da Marisa — Telas 5/4/6 do NetHAL Lab, `AuthenticationScreen`/
+  `CapabilitiesScreen`/`ReportScreen`)** — Revisão do item 1 da pendência acima ("Bruno — implementar
+  a Tela 5 com o aviso de TOFU"): **cumprido**. `AuthenticationScreen` exibe o aviso quando
+  `AuthenticationUiState.Ready.showTofuWarning` é `true` (só para `tplink-stok-luci-driver`), com
+  texto fiel a esta seção — nem suaviza nem infla o risco: descreve a busca de chave sem
+  certificado, a impossibilidade de confirmar a autenticidade do host de antemão, e recomenda uso
+  restrito à rede local confiável. Campos obrigatórios da spec §11 também presentes (usuário, senha,
+  botão testar, aviso de senha não salva, aviso de sessão única). Credencial nunca logada/persistida
+  em nenhuma classe nova (`AuthenticationViewModel`, `CapabilitiesViewModel`, `ReportViewModel`,
+  `NetHalViewModelFactory`) — confirmado por leitura completa do diff, sem uso de
+  `SavedStateHandle`/`Bundle`/DataStore para credencial em nenhum ponto.
+  `CapabilityEngine.closeSession()` é chamado via `DisposableEffect` ao sair de composição tanto da
+  Tela 5 quanto da Tela 4, com `sessionHandedOff` evitando o bug real já documentado no KDoc de
+  `AuthenticationViewModel.closeSession` (derrubar a sessão que acabou de ser entregue à Tela 4 ao
+  navegar para frente) — coberto por teste (`AuthenticationViewModelTest`). Tela 6 ("Enviar
+  relatório anônimo") não faz nenhuma chamada de rede: `ReportViewModel.sendAnonymousReport` só
+  troca o estado local para `SendReportState.Unavailable` com mensagem honesta — confirmado que não
+  há import de `HttpTransport`/cliente HTTP em `ui/report/`, consistente com ADR 0001 (nenhum
+  Telemetry Collector implementado ainda). Nenhuma capability de escrita (`SET_*`/`REBOOT_*`/
+  `RESTART_*`) é exposta como ação nas Telas 4/6 — aparecem só como linha de leitura do vocabulário
+  oficial (estado + motivo), sem botão associado; único uso de `Button`/`onClick` nessas telas é
+  navegação (voltar/continuar/testar/ver relatório/enviar relatório anônimo, este último
+  comprovadamente no-op). Aprovado sem ressalva de segurança.
+
+  **Item 2 da pendência acima (Diego — validar ao vivo que o login do `tplink_archer_c6_stok_v1`
+  passa pela Tela 5 antes de qualquer leitura autenticada) continua em aberto** — fora do escopo
+  desta revisão (revisão de código/UI, não execução contra hardware físico). `stage` do profile
+  permanece `READ_ONLY_ALPHA` no manifesto vigente; promoção para `READ_ONLY_BETA` depende também
+  desse item 2 e é decisão do Rafael, não desta revisão.
 
 - **2026-07-08 (issue #16 — Capability Engine com gerenciamento de sessão real; `tplink-stok-luci`
   sai do estado "sempre `Unavailable`")** — `DriverFamily.readCapability(id)` deixa de ser stub em
