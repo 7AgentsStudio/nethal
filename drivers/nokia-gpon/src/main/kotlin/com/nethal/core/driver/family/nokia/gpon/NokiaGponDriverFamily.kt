@@ -288,7 +288,19 @@ internal class NokiaGponDriverFamily(
                     capability = Capability(id = id, state = CapabilityState.AVAILABLE, confidence = 1.0),
                     payload = CapabilityPayload.DeviceInfo(
                         DeviceInfo(
-                            vendor = info.manufacturer,
+                            // Hardcoded, não `info.manufacturer`: o campo bruto `Manufacturer` deste
+                            // firmware vem "ALCL" (herança Alcatel-Lucent, que a Nokia adquiriu — a
+                            // própria UI oficial do equipamento também hardcoda "Nokia" em vez de
+                            // mostrar o campo bruto). Confirmado por evidência cruzada de dois
+                            // produtos: `docs_ai/technical/NOKIA_GPON_FIELD_MAP.md` (SignallQ,
+                            // levantamento exaustivo contra este mesmo modelo físico) e
+                            // `NokiaLocalDeviceMapper.kt` (driver de produção do SignallQ, que faz
+                            // exatamente este mesmo hardcode). Sem esta correção, `DeviceInfo.vendor`
+                            // mostraria "ALCL" na Tela 4 do Lab — não é `if (vendor == ...)` de core,
+                            // é fato conhecido desta única plataforma (`nokia-gpon-rsa-aes`), mesmo
+                            // raciocínio já aplicado a `vendor = "TP-Link"` em
+                            // `TpLinkLegacyCgiDriverFamily` (changelog 2026-07-08).
+                            vendor = "Nokia",
                             model = info.model,
                             firmware = info.softwareVersion,
                             hardwareVersion = info.hardwareVersion,
