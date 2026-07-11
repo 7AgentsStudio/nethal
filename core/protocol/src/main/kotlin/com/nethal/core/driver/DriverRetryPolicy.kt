@@ -13,7 +13,7 @@ import java.net.SocketTimeoutException
  * vocabulário continua vivendo no enum de falha de cada driver, porque cada protocolo decide de
  * forma diferente o que é fast-fail vs. candidato a retry.
  */
-internal enum class NetworkFailureReason {
+enum class NetworkFailureReason {
     DEVICE_UNREACHABLE,
     TIMEOUT,
     UNEXPECTED_RESPONSE,
@@ -26,7 +26,7 @@ internal enum class NetworkFailureReason {
  * empilhar checagens específicas de protocolo por cima (ex.: TP-Link C6 e Nokia reconhecem
  * substrings de resposta inesperada do próprio handshake) antes de cair no genérico abaixo.
  */
-internal fun classifyNetworkFailure(error: Throwable): NetworkFailureReason = when {
+fun classifyNetworkFailure(error: Throwable): NetworkFailureReason = when {
     error is ConnectException -> NetworkFailureReason.DEVICE_UNREACHABLE
     error is SocketTimeoutException -> NetworkFailureReason.TIMEOUT
     error.message?.contains("timed out", ignoreCase = true) == true -> NetworkFailureReason.TIMEOUT
@@ -41,7 +41,7 @@ internal fun classifyNetworkFailure(error: Throwable): NetworkFailureReason = wh
  * quanto o [error] original (para extrair mensagem) — assim o driver não precisa reclassificar a
  * exceção depois de receber o outcome, evitando duplicar o mesmo `when` duas vezes.
  */
-internal sealed interface RetryOutcome<out T, out R> {
+sealed interface RetryOutcome<out T, out R> {
     data class Success<T>(val value: T) : RetryOutcome<T, Nothing>
     data class Failure<R>(val reason: R, val error: Throwable) : RetryOutcome<Nothing, R>
 }
@@ -63,7 +63,7 @@ internal sealed interface RetryOutcome<out T, out R> {
  * chamador — tipicamente delegando a [classifyNetworkFailure] mais checagens específicas de
  * protocolo.
  */
-internal suspend fun <T, E : Throwable, R> executeWithRetry(
+suspend fun <T, E : Throwable, R> executeWithRetry(
     maxAttempts: Int,
     backoffMillis: (attempt: Int) -> Long,
     loginExceptionType: Class<E>,

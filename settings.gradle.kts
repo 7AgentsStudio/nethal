@@ -18,4 +18,5 @@ rootProject.name = "NetHAL"
 
 include(":core")
 include(":core:model")
+include(":core:protocol")
 include(":app")

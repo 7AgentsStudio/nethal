@@ -1,6 +1,7 @@
 package com.nethal.core.discovery
 
 import com.nethal.core.model.DiscoveryResult
+import com.nethal.core.protocol.PrivateIpRanges
 import com.nethal.core.model.NetworkTarget
 import com.nethal.core.model.TargetRole
 import com.nethal.core.model.TargetSource

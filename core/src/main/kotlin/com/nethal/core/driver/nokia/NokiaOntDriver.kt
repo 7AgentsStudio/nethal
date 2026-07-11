@@ -1,6 +1,6 @@
 package com.nethal.core.driver.nokia
 
-import com.nethal.core.discovery.PrivateIpRanges
+import com.nethal.core.protocol.PrivateIpRanges
 import com.nethal.core.driver.NetworkFailureReason
 import com.nethal.core.driver.RetryOutcome
 import com.nethal.core.driver.classifyNetworkFailure

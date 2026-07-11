@@ -2,7 +2,7 @@ package com.nethal.core.tooling
 
 import com.nethal.core.catalog.DefaultDriverRegistry
 import com.nethal.core.catalog.loadEmbeddedCatalogResource
-import com.nethal.core.discovery.PrivateIpRanges
+import com.nethal.core.protocol.PrivateIpRanges
 import com.nethal.core.driver.family.defaultDriverFamilyRegistry
 import com.nethal.core.driver.family.tplink.legacycgi.TpLinkLegacyCgiDriverFamily
 import com.nethal.core.driver.family.tplink.legacycgi.TpLinkLegacyCgiReadOutcome

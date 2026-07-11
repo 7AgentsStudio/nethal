@@ -5,7 +5,7 @@ import com.nethal.core.catalog.CompatibilityProfile
 import com.nethal.core.catalog.DriverFamily
 import com.nethal.core.catalog.DriverFamilyAuthResult
 import com.nethal.core.catalog.DriverFamilyFactory
-import com.nethal.core.discovery.PrivateIpRanges
+import com.nethal.core.protocol.PrivateIpRanges
 import com.nethal.core.driver.NetworkFailureReason
 import com.nethal.core.driver.RetryOutcome
 import com.nethal.core.driver.classifyNetworkFailure

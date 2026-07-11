@@ -1,6 +1,6 @@
 package com.nethal.core.fingerprint
 
-import com.nethal.core.discovery.PrivateIpRanges
+import com.nethal.core.protocol.PrivateIpRanges
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader

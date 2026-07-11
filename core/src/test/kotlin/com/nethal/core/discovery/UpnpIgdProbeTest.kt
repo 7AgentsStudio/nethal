@@ -1,5 +1,6 @@
 package com.nethal.core.discovery
 
+import com.nethal.core.protocol.PrivateIpRanges
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
