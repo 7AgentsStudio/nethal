@@ -12,6 +12,7 @@ kotlin {
 dependencies {
     api(project(":core:model"))
     api(project(":core:protocol"))
+    api(project(":core:catalog"))
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
