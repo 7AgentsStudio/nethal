@@ -329,6 +329,67 @@ C20 como `TpLinkLegacyCgiDriverFamily`), aprovado com esta ressalva documentada.
 
 ## Changelog
 
+- **2026-07-11 (Bruno — issue #125, correção real do contador `seq` do envelope `sign` em
+  `tplink-stok-luci`)** — Investigação anterior (mesmo dia, entrada abaixo) tinha levantado a
+  hipótese de lockout por múltiplos re-logins em sequência; **refutada por teste real do Luiz**
+  isolando `tplinkC6StokManualCheck` a um único `login()` seguido de leituras autenticadas: login
+  sempre bem-sucedido (`stok` real capturado), mas **toda** leitura autenticada seguinte falhando com
+  HTTP 403 ("sessão/token stok provavelmente expirado") — inclusive a primeira, inclusive
+  `admin/status?form=all`, já dado como confirmado em 2026-07-07.
+
+  **Causa raiz encontrada por leitura de código** (não por nova captura ao vivo):
+  `TpLinkStokLuciAuthenticationClient` guardava `seq` (devolvido cru por `form=auth`) como valor
+  fixo, reusado sem alteração tanto na assinatura do próprio `POST .../login?form=login` quanto em
+  TODA chamada de `fetchAuthenticatedRaw` da mesma sessão. A lib de referência `tplinkrouterc6u`
+  (`EncryptionWrapperMR`) — já citada em todo este driver como fonte da correção de `k=`/`i=`/`h=` —
+  trata `seq` como um contador monotônico por sessão: a cada envelope `sign` assinado, o `s=` enviado
+  (`seq + tamanho_base64_do_data`) vira o novo piso esperado pelo firmware na PRÓXIMA assinatura da
+  mesma sessão. Sem esse avanço, a assinatura do login continua válida (é a própria chamada que
+  estabelece o piso), mas toda chamada seguinte assina com um `s=` que já ficou pra trás no instante
+  em que o login termina — 403 em 100% das leituras autenticadas, exatamente o padrão relatado.
+
+  **Nota de processo (gap descoberto durante a investigação, não introduzido por esta correção):** a
+  afirmação "leitura autenticada real de `admin/status?form=all` confirmada em 2026-07-07"
+  (`docs/drivers/live-evidence/tplink-archer-c6-stok-v1.json`, entrada `2026-07-07` abaixo) vem de
+  captura de tráfego do NAVEGADOR (Playwright) confirmando a FORMA do protocolo, não de uma execução
+  bem-sucedida do `tplinkC6StokManualCheck` (driver Kotlin real) contra o hardware. Não há entrada
+  neste changelog documentando uma corrida real do driver com o envelope `sign=`/`data=` de leitura
+  (adicionado só em `d5b2181`, 2026-07-07 08:25) confirmada contra o equipamento antes da rodada desta
+  issue — plausível que este bug de `seq` sempre tenha existido desde então e nunca tivesse sido
+  exercitado de verdade contra hardware físico até o teste do Luiz em #125.
+
+  **Código alterado:** `TpLinkStokLuciAuthenticationClient.SessionEncryptorContext.seq` passou de
+  `val` para `var`. `login()` inicializa `seq` já contabilizando o próprio request de login
+  (`parsedAuthKeys.seq + dataBase64.length`, o `s=` que aquele login acabou de enviar/ter aceito), em
+  vez do `seq` bruto de `form=auth`. `fetchAuthenticatedRaw()` avança `seq` (`+= dataBase64.length`)
+  logo após montar cada `sign`, antes de enviar — para a PRÓXIMA chamada assinada da sessão (seja
+  outra leitura, seja uma ação como `REBOOT_DEVICE`) já nascer sincronizada.
+
+  **Testes novos** (`TpLinkStokLuciAuthenticationClientTest`, `FakeTpLinkStokLuciHttpTransport` ganhou
+  `capturedAuthenticatedSeqValues`, decifrando `s=` de cada chamada autenticada): confirma que a
+  PRIMEIRA leitura autenticada de uma sessão nova já usa um `s=` maior que o `seq` bruto de
+  `form=auth` (contabilizando o avanço do próprio login) e que duas leituras consecutivas com corpo
+  idêntico produzem `s=` estritamente crescente (nunca o mesmo valor reusado). Ambos os testes falham
+  contra o código anterior à correção — reproduzem o bug sem precisar de hardware real, é comportamento
+  de transporte/parsing, não de firmware.
+
+  **Ainda sem confirmação por evidência ao vivo desta correção específica** contra o Archer C6 físico
+  do Luiz — é uma correção de leitura de protocolo contra a MESMA lib de referência que já orientou
+  toda a correção anterior deste driver (nenhuma suposição nova), mas o próximo `tplinkC6StokManualCheck`
+  do Luiz é quem confirma ou refuta de fato. `stage`/`confidenceScoreOverall` do profile
+  `tplink_archer_c6_stok_v1` não mudam nesta rodada — sem manifesto novo, é correção de código, não de
+  catálogo.
+
+- **2026-07-11 (Bruno — investigação da issue #125, hipótese de lockout por múltiplos logins,
+  refutada por teste real do Luiz)** — Ver entrada acima para a causa raiz real e a correção. Esta
+  entrada preserva o registro da hipótese descartada: análise de código (`git diff` entre o commit
+  confirmado em 2026-07-07 e a PR #124) não encontrou regressão em `fetchAuthenticatedRaw`,
+  `core/protocol` nem `TpLinkStokLuciAuthenticationClient` — byte-idênticos entre as duas rodadas. A
+  diferença real identificada foi de quantidade de re-logins que o `tplinkC6StokManualCheck` da PR
+  #124 passou a disparar em sequência rápida (4-5, vs. 3 antes), levantando a hipótese de lockout por
+  firmware. Teste real do Luiz isolando a um único login refutou essa hipótese (login sempre
+  funciona; toda leitura falha mesmo com um login só) e apontou para o bug de `seq` documentado acima.
+
 - **2026-07-11 (Bruno — `REBOOT_DEVICE` no `tplink-stok-luci`, primeira capability de ação/escrita
   "genérica" do produto, issues #95/#103)** — Novo manifesto `catalog-2026.07.29.json`
   (`previousManifest: catalog-2026.07.28.json`).
