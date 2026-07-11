@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 32" fill="none">
+  <rect x="2" y="2" width="28" height="28" rx="8" stroke="#006FFF" stroke-width="2.6"></rect>
+  <rect x="12" y="12" width="8" height="8" rx="2" fill="#006FFF"></rect>
+  <text x="42" y="22" font-family="Roboto, sans-serif" font-weight="700" font-size="20" letter-spacing="0.6" fill="#10192B">NETHAL</text>
+</svg>

@@ -65,6 +65,10 @@ Antes de criar ou editar qualquer tela ou fluxo do NetHAL Lab, use o design entr
 - Superfícies historicamente perigosas (ex.: HNAP D-Link) só entram como fingerprint/alerta — nunca como driver de ação. TR-069/CWMP só como fingerprint passivo.
 - Não duplica componente existente — procura antes.
 - Não inventa arquitetura nova sem necessidade.
+- Trabalhando em worktree isolado: `local.properties` (SDK Android) é ignorado pelo git e não é
+  herdado por worktree novo — `:app:compileDebugKotlin`/`:app:assembleDebug` vão falhar por falta
+  de SDK, não por bug no código. Reportar isso explicitamente (não fingir que compilou, não pular
+  a verificação em silêncio); quem orquestra decide se copia o arquivo ou valida no diretório principal.
 - Toda decisão de reuso de biblioteca externa documentada (nome, licença, papel, esforço).
 - Se a tarefa for grande demais ou cruzar arquitetura, **devolve para o Rafael redividir**.
 - Se encontrar gambiarra, aponta claramente e propõe o corte correto.
