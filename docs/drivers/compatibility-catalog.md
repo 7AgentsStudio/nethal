@@ -358,13 +358,16 @@ C20 como `TpLinkLegacyCgiDriverFamily`), aprovado com esta ressalva documentada.
   IGD_DEV_INFO+ETH_SWITCH+SYS_MODE. `app/.../CapabilityDisplay.kt` (`when` exaustivo sobre
   `CapabilityPayload`) ganhou o branch correspondente para continuar compilando.
 
-  Nota de telemetria para a Marisa: `READ_CONNECTED_CLIENTS` deste driver mapeia
-  `TpLinkLegacyCgiConnectedClient.macAddressMasked` (já mascarado no parser,
-  `TpLinkLegacyCgiResponseParser.maskMac`) direto para `ConnectedClient.macAddress` — o modelo público
-  espera dado bruto por decisão do ADR 0001 (mascaramento é fronteira de exportação de um futuro
-  Telemetry Collector, não do modelo local), mas este parser já mascarava antes do ADR existir e não
-  foi tocado nesta entrega (fora de escopo da issue #19). Divergência pré-existente, não introduzida
-  aqui — sinalizada para revisão de telemetria, não corrigida silenciosamente.
+  **Correção de gate (Marisa) — violação real do ADR 0001, não só divergência a documentar:**
+  `TpLinkLegacyCgiConnectedClient` mascarava o MAC no próprio parser
+  (`TpLinkLegacyCgiResponseParser.maskMac`, agora removido) antes de chegar ao modelo local — o ADR
+  0001 (já aceito, já aplicado ao `stok-luci` na issue #16) determina que mascaramento é fronteira de
+  exportação de um futuro Telemetry Collector, nunca do modelo de dados local. Campo renomeado de
+  `macAddressMasked` para `macAddress` (MAC bruto) em `TpLinkLegacyCgiConnectedClient`,
+  `parseConnectedClients()` para de mascarar, e `connectedClientsResultFor()` passa o valor bruto
+  direto para `ConnectedClient.macAddress` — mesmo tratamento já dado a
+  `TpLinkStokLuciConnectedClient`/`TpLinkStokLuciLanStatus`. Testes ajustados para MAC completo
+  (`AA:BB:CC:DD:EE:FF`), inclusive `DriverFamilyRegistryIntegrationTest`.
 
   **Estágio do profile:** permanece `READ_ONLY_ALPHA`, sem promoção (fora de escopo desta issue —
   critério de promoção é `/ciclo-vida-driver`, decisão de Rafael). Escopo estritamente `READ_ONLY`,

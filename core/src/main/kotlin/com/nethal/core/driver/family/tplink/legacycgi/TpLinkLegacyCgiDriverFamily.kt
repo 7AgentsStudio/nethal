@@ -315,7 +315,7 @@ internal class TpLinkLegacyCgiDriverFamily(
             payload = CapabilityPayload.ConnectedClients(
                 ConnectedClientList(
                     clients = clients.map { client ->
-                        ConnectedClient(hostname = client.hostname, ipAddress = client.ipAddress, macAddress = client.macAddressMasked)
+                        ConnectedClient(hostname = client.hostname, ipAddress = client.ipAddress, macAddress = client.macAddress)
                     },
                 ),
             ),

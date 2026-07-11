@@ -110,7 +110,7 @@ class TpLinkLegacyCgiDriverFamilyTest {
         assertEquals(2, snapshot.wifi.size)
         assertEquals("Casa-2.4G", snapshot.wifi[0].ssid)
         assertEquals(1, snapshot.connectedClients.size)
-        assertEquals("AA:BB:CC:**:**:**", snapshot.connectedClients.first().macAddressMasked)
+        assertEquals("AA:BB:CC:DD:EE:FF", snapshot.connectedClients.first().macAddress)
     }
 
     @Test
@@ -214,7 +214,7 @@ class TpLinkLegacyCgiDriverFamilyTest {
         val clientsPayload = (clients as com.nethal.core.catalog.CapabilityReadResult.Success).payload
             as com.nethal.core.model.CapabilityPayload.ConnectedClients
         assertEquals(1, clientsPayload.clients.clients.size)
-        assertEquals("AA:BB:CC:**:**:**", clientsPayload.clients.clients.first().macAddress)
+        assertEquals("AA:BB:CC:DD:EE:FF", clientsPayload.clients.clients.first().macAddress)
 
         // authenticate (1) + 3 leituras por-capability (1 cada) = 4, nenhum novo login.
         assertEquals(4, transport.postCallCount)
